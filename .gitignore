@@ -1,0 +1,34 @@
+# Dependencias
+node_modules/
+
+# Ambiente
+.env
+.env.local
+
+# Build
+.next/
+dist/
+tsconfig.tsbuildinfo
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema
+.DS_Store
+
+# Vercel
+.vercel/
+
+# 🔐 ARQUIVOS SENSIVEIS / PESSOAIS
+Relatorio*
+RELATORIO*
+Tutorial*
+PROMPT*
+CREDENCIAIS*
+*.txt

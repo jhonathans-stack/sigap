@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: sigap-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPER_USER_NAME
+        value: Jhonathan Neves de Sousa
+      - key: SUPER_USER_MATRICULA
+        value: 20252SI0016
+      - key: SUPER_USER_EMAIL
+        value: jhonathans@ifma.edu.br
+      - key: SUPER_USER_PASSWORD
+        sync: false
