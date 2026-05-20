@@ -1,6 +1,7 @@
 const pool = require("../config/db");
 const AppError = require("../utils/AppError");
 const { isPositiveInteger } = require("../utils/validators");
+const auditService = require("./auditService");
 
 const publicUserFields = `
   id,
@@ -63,10 +64,53 @@ const deleteUser = async (id, requester) => {
 
   await pool.query("DELETE FROM usuarios WHERE id = $1", [userId]);
 
+  await auditService.logAction({
+    usuarioId: requester.id,
+    acao: "usuario_excluido",
+    entidade: "usuarios",
+    entidadeId: userId,
+    detalhes: { email: user.email, role: user.role }
+  });
+
   return user;
+};
+
+const promoteAdminToSuper = async (id, requester) => {
+  if (!isPositiveInteger(id)) {
+    throw new AppError("ID do usuario invalido.", 400);
+  }
+
+  const userId = Number(id);
+
+  if (requester.id === userId) {
+    throw new AppError("O superusuario logado ja possui acesso super.", 400);
+  }
+
+  const result = await pool.query(
+    `UPDATE usuarios
+     SET role = 'super'
+     WHERE id = $1 AND role = 'admin'
+     RETURNING ${publicUserFields}`,
+    [userId]
+  );
+
+  if (!result.rowCount) {
+    throw new AppError("Somente administradores podem receber acesso superusuario por esta acao.", 400);
+  }
+
+  await auditService.logAction({
+    usuarioId: requester.id,
+    acao: "admin_promovido_para_super",
+    entidade: "usuarios",
+    entidadeId: userId,
+    detalhes: { email: result.rows[0].email }
+  });
+
+  return result.rows[0];
 };
 
 module.exports = {
   listUsers,
-  deleteUser
+  deleteUser,
+  promoteAdminToSuper
 };

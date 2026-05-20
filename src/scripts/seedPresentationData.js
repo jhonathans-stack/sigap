@@ -146,6 +146,41 @@ const items = [
   }
 ];
 
+const lostRequests = [
+  {
+    userEmail: "ana.beatriz@sigap.demo",
+    nome_item: "Fone bluetooth preto",
+    categoria: "eletronicos",
+    data_perda: "2026-05-08",
+    turno: "tarde",
+    local_provavel: "Laboratorios do Monte Castelo",
+    caracteristicas: "Fone preto com estojo pequeno e marcas de uso",
+    status: "encontrado",
+    matchItemName: "Fone de ouvido Bluetooth"
+  },
+  {
+    userEmail: "rafael.martins@sigap.demo",
+    nome_item: "Chaveiro com pingente azul",
+    categoria: "acessorios",
+    data_perda: "2026-05-17",
+    turno: "manha",
+    local_provavel: "Patio central",
+    caracteristicas: "Chaveiro metalico com duas chaves e pingente azul",
+    status: "encontrado",
+    matchItemName: "Chaveiro com duas chaves"
+  },
+  {
+    userEmail: "marina.sousa@sigap.demo",
+    nome_item: "Blusa de frio preta",
+    categoria: "vestuario",
+    data_perda: "2026-05-18",
+    turno: "noite",
+    local_provavel: "Biblioteca",
+    caracteristicas: "Blusa preta com iniciais pequenas na etiqueta",
+    status: "alerta_ativo"
+  }
+];
+
 async function upsertUser(user, senhaHash, index) {
   const cpf = user.cpf || buildDemoCpf(index);
 
@@ -225,6 +260,70 @@ async function upsertItem(item, adminId) {
   return existing.rows[0].id;
 }
 
+async function upsertLostRequest(request) {
+  const userResult = await pool.query("SELECT id FROM usuarios WHERE email = $1", [request.userEmail]);
+  const user = userResult.rows[0];
+
+  if (!user) {
+    return null;
+  }
+
+  const matchResult = request.matchItemName
+    ? await pool.query("SELECT id FROM itens WHERE nome_item = $1", [request.matchItemName])
+    : { rows: [] };
+  const matchId = matchResult.rows[0]?.id || null;
+
+  const result = await pool.query(
+    `WITH updated AS (
+       UPDATE solicitacoes_perdidos
+       SET categoria = $3,
+           turno = $5,
+           local_provavel = $6,
+           caracteristicas = $7,
+           status = $8,
+           item_match_id = $9,
+           atualizado_em = NOW()
+       WHERE usuario_id = $1 AND nome_item = $2 AND data_perda = $4
+       RETURNING id
+     )
+     INSERT INTO solicitacoes_perdidos (
+       usuario_id,
+       nome_item,
+       categoria,
+       data_perda,
+       turno,
+       local_provavel,
+       caracteristicas,
+       status,
+       item_match_id
+     )
+     SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9
+     WHERE NOT EXISTS (SELECT 1 FROM updated)
+     RETURNING id`,
+    [
+      user.id,
+      request.nome_item,
+      request.categoria,
+      request.data_perda,
+      request.turno,
+      request.local_provavel,
+      request.caracteristicas,
+      request.status,
+      matchId
+    ]
+  );
+
+  if (result.rowCount) {
+    return result.rows[0].id;
+  }
+
+  const existing = await pool.query(
+    "SELECT id FROM solicitacoes_perdidos WHERE usuario_id = $1 AND nome_item = $2 AND data_perda = $3",
+    [user.id, request.nome_item, request.data_perda]
+  );
+  return existing.rows[0]?.id || null;
+}
+
 async function seed() {
   await initializeDatabase();
 
@@ -242,11 +341,21 @@ async function seed() {
     itemIds.push(await upsertItem(item, admin.id));
   }
 
+  const lostRequestIds = [];
+
+  for (const request of lostRequests) {
+    const id = await upsertLostRequest(request);
+    if (id) {
+      lostRequestIds.push(id);
+    }
+  }
+
   console.log(JSON.stringify({
     mensagem: "Dados ficticios de apresentacao inseridos com sucesso.",
     senha_demo: demoPassword,
     usuarios: createdUsers.map(({ nome, email, role, matricula }) => ({ nome, email, role, matricula })),
-    itens_inseridos_ou_atualizados: itemIds.length
+    itens_inseridos_ou_atualizados: itemIds.length,
+    solicitacoes_perdidos_inseridas_ou_atualizadas: lostRequestIds.length
   }, null, 2));
 }
 

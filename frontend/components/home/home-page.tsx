@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CircleCheckBig, FilterX, PackageCheck, PackageOpen, PlusCircle, RefreshCw, Search } from "lucide-react";
+import { CircleCheckBig, FilterX, MapPin, PackageCheck, PackageOpen, PlusCircle, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { Header } from "@/components/header";
@@ -14,7 +14,8 @@ import type { Item, ItemStatus } from "@/lib/types";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canManageItems } from "@/lib/storage";
 
-const categoryOptions = ["documentos", "eletrônicos", "material escolar", "roupas", "acessórios", "outros"];
+const categoryOptions = ["documentos", "eletronicos", "material escolar", "vestuario", "acessorios", "outros"];
+const locationOptions = ["Patio central", "Biblioteca", "Laboratorios do Monte Castelo", "Cantina", "Secretaria academica", "Auditorio principal"];
 
 export function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -22,7 +23,10 @@ export function HomePage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoria, setCategoria] = useState("");
+  const [local, setLocal] = useState("");
   const [status, setStatus] = useState<ItemStatus | "">("");
+  const [ordem, setOrdem] = useState<"recentes" | "antigos">("recentes");
+  const [visibleCount, setVisibleCount] = useState(9);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { user } = useAuth();
@@ -37,10 +41,14 @@ export function HomePage() {
     () => ({
       nome: debouncedSearch,
       categoria,
-      status
+      local,
+      status,
+      ordem
     }),
-    [debouncedSearch, categoria, status]
+    [debouncedSearch, categoria, local, status, ordem]
   );
+
+  const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
 
   const summary = useMemo(
     () => [
@@ -77,6 +85,7 @@ export function HomePage() {
       try {
         const data = await itensApi.list(filters);
         setItems(data);
+        setVisibleCount(9);
       } catch (error) {
         toast.error(getApiErrorMessage(error, "Nao foi possivel carregar os itens."));
       } finally {
@@ -95,7 +104,9 @@ export function HomePage() {
     setSearch("");
     setDebouncedSearch("");
     setCategoria("");
+    setLocal("");
     setStatus("");
+    setOrdem("recentes");
   }
 
   function handleUpdated(updatedItem: Item) {
@@ -112,7 +123,7 @@ export function HomePage() {
     <main className="min-h-screen">
       <Header />
 
-      <section className="mx-auto max-w-6xl px-4 py-8">
+      <section className="mx-auto max-w-7xl px-4 py-8">
         <div className="sigap-section-band overflow-hidden rounded-lg">
           <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_360px] lg:p-8">
             <div>
@@ -120,12 +131,12 @@ export function HomePage() {
               <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white sm:text-4xl">Itens cadastrados</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                 {canManage
-                  ? "Consulte, filtre, atualize e acompanhe os registros do sistema de achados e perdidos."
-                  : "Consulte os itens encontrados, veja detalhes, local, data do achado e situação de devolução."}
+                  ? "Consulte, filtre e acompanhe os registros do sistema de achados e perdidos."
+                  : "Consulte os itens encontrados, veja detalhes, local, data do achado e situacao de devolucao."}
               </p>
               {!canManage ? (
                 <div className="mt-5 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-200">
-                  Modo consulta: seu perfil pode visualizar os itens, mas não pode cadastrar, editar ou excluir registros.
+                  Modo consulta: seu perfil pode visualizar os itens, mas nao pode cadastrar, editar ou excluir registros.
                 </div>
               ) : null}
               {canManage ? (
@@ -152,7 +163,7 @@ export function HomePage() {
         </div>
 
         <section className="sigap-surface mt-6 rounded-lg p-4">
-          <div className="grid gap-3 lg:grid-cols-[1fr_220px_180px_auto_auto]">
+          <div className="grid gap-3 xl:grid-cols-[1fr_180px_220px_190px_170px_auto_auto]">
             <label className="relative block">
               <span className="sr-only">Buscar por nome</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -177,6 +188,18 @@ export function HomePage() {
             </label>
 
             <label>
+              <span className="sr-only">Local</span>
+              <select className="sigap-input" value={local} onChange={(event) => setLocal(event.target.value)}>
+                <option value="">Todos os locais</option>
+                {locationOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
               <span className="sr-only">Status</span>
               <select
                 className="sigap-input"
@@ -185,7 +208,16 @@ export function HomePage() {
               >
                 <option value="">Todos os status</option>
                 <option value="achado">Aguardando coleta</option>
+                <option value="aguardando_retirada">Aguardando retirada</option>
                 <option value="entregue">Devolvido</option>
+              </select>
+            </label>
+
+            <label>
+              <span className="sr-only">Ordenacao</span>
+              <select className="sigap-input" value={ordem} onChange={(event) => setOrdem(event.target.value as "recentes" | "antigos")}>
+                <option value="recentes">Mais recentes</option>
+                <option value="antigos">Mais antigos</option>
               </select>
             </label>
 
@@ -205,7 +237,17 @@ export function HomePage() {
           {isLoading ? (
             <LoadingSkeleton />
           ) : items.length ? (
-            <ItemCarousel items={items} onDetails={setSelectedItem} />
+            <>
+              <ItemCarousel items={visibleItems} onDetails={setSelectedItem} />
+              {visibleCount < items.length ? (
+                <div className="mt-6 flex justify-center">
+                  <button type="button" className="sigap-secondary" onClick={() => setVisibleCount((current) => current + 9)}>
+                    <MapPin size={17} />
+                    Carregar mais itens
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <EmptyState canCreate={canManage} />
           )}

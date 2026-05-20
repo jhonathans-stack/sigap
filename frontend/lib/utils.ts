@@ -22,7 +22,7 @@ export function getItemImageUrl(imageUrl?: string | null) {
 
 export function formatDate(date?: string | null) {
   if (!date) {
-    return "Não informado";
+    return "Nao informado";
   }
 
   const parsedDate = new Date(date);
@@ -33,6 +33,23 @@ export function formatDate(date?: string | null) {
 
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short"
+  }).format(parsedDate);
+}
+
+export function formatDateTime(date?: string | null) {
+  if (!date) {
+    return "Nao informado";
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return date;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short"
   }).format(parsedDate);
 }
 

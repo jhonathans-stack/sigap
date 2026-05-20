@@ -1,8 +1,19 @@
 const authService = require("../services/authService");
 const asyncHandler = require("../utils/asyncHandler");
 
+const buildUploadedImageUrl = (file) => {
+  if (!file) {
+    return undefined;
+  }
+
+  return `/uploads/${file.filename}`;
+};
+
 const register = asyncHandler(async (req, res) => {
-  const user = await authService.registerUser(req.body);
+  const user = await authService.registerUser({
+    ...req.body,
+    foto_url: buildUploadedImageUrl(req.file)
+  });
   const token = authService.generateToken(user);
 
   res.status(201).json({

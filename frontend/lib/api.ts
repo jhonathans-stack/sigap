@@ -6,7 +6,10 @@ import type {
   Item,
   ItemFilters,
   ItemMutationResponse,
+  AuditLog,
   LoginResponse,
+  LostItemRequest,
+  LostItemResponse,
   RegisterResponse,
   User,
   UserCreateResponse,
@@ -79,7 +82,7 @@ export const authApi = {
     return data;
   },
 
-  async register(payload: { nome: string; email: string; senha: string; cpf: string; matricula: string }) {
+  async register(payload: FormData | { nome: string; email: string; senha: string; cpf: string; matricula: string }) {
     const { data } = await api.post<RegisterResponse>("/api/auth/register", payload);
     return data;
   }
@@ -101,8 +104,21 @@ export const itensApi = {
       params.set("status", filters.status);
     }
 
+    if (filters.local?.trim()) {
+      params.set("local", filters.local.trim());
+    }
+
+    if (filters.ordem) {
+      params.set("ordem", filters.ordem);
+    }
+
     const query = params.toString();
     const { data } = await api.get<Item[]>(query ? `/api/itens?${query}` : "/api/itens");
+    return data;
+  },
+
+  async myRequests() {
+    const { data } = await api.get<Item[]>("/api/itens/minhas-solicitacoes");
     return data;
   },
 
@@ -119,6 +135,16 @@ export const itensApi = {
   async remove(id: number) {
     const { data } = await api.delete<{ mensagem: string }>(`/api/itens/${id}`);
     return data;
+  },
+
+  async requestReturn(id: number) {
+    const { data } = await api.post<ItemMutationResponse>(`/api/itens/${id}/solicitar-devolucao`);
+    return data;
+  },
+
+  async confirmReceipt(id: number) {
+    const { data } = await api.post<ItemMutationResponse>(`/api/itens/${id}/confirmar-recebimento`);
+    return data;
   }
 };
 
@@ -133,8 +159,54 @@ export const usuariosApi = {
     return data;
   },
 
+  async promoteToSuper(id: number) {
+    const { data } = await api.patch<UserCreateResponse>(`/api/usuarios/${id}/promover-super`);
+    return data;
+  },
+
   async remove(id: number) {
     const { data } = await api.delete<UserDeleteResponse>(`/api/usuarios/${id}`);
+    return data;
+  }
+};
+
+export const lostItemsApi = {
+  async matches(payload: {
+    nome_item: string;
+    categoria: string;
+    local_provavel: string;
+    caracteristicas: string;
+  }) {
+    const { data } = await api.post<Item[]>("/api/perdidos/matches", payload);
+    return data;
+  },
+
+  async create(formData: FormData) {
+    const { data } = await api.post<LostItemResponse>("/api/perdidos", formData);
+    return data;
+  },
+
+  async mine() {
+    const { data } = await api.get<LostItemRequest[]>("/api/perdidos/minhas");
+    return data;
+  },
+
+  async listAll() {
+    const { data } = await api.get<LostItemRequest[]>("/api/perdidos");
+    return data;
+  }
+};
+
+export const auditApi = {
+  async list() {
+    const { data } = await api.get<AuditLog[]>("/api/auditoria");
+    return data;
+  },
+
+  async exportItemsCsv() {
+    const { data } = await api.get<Blob>("/api/auditoria/export-itens", {
+      responseType: "blob"
+    });
     return data;
   }
 };

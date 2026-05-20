@@ -69,6 +69,18 @@ export function AuthGuard({
     };
   }, [allowedRolesKey, isLoading, logout, router, setSession, token]);
 
+  useEffect(() => {
+    function handlePageShow(event: PageTransitionEvent) {
+      if (event.persisted && !getStoredToken()) {
+        logout();
+        router.replace("/login");
+      }
+    }
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [logout, router]);
+
   if (isLoading || isChecking) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 text-slate-700 dark:bg-slate-950 dark:text-slate-200">

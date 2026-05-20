@@ -47,9 +47,30 @@ const ensureCompatibleColumns = async () => {
   await runCompatibilityQuery("ALTER TABLE usuarios DROP COLUMN IF EXISTS campus");
 
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS data_achado DATE");
+  await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS solicitado_por_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL");
+  await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS solicitado_em TIMESTAMP WITH TIME ZONE");
+  await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS confirmado_por_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL");
+  await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS confirmado_em TIMESTAMP WITH TIME ZONE");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()");
+  await runCompatibilityQuery("ALTER TABLE itens DROP CONSTRAINT IF EXISTS itens_status_check");
+  await pool.query("ALTER TABLE itens ADD CONSTRAINT itens_status_check CHECK (status IN ('achado', 'aguardando_retirada', 'entregue'))");
   await pool.query("ALTER TABLE itens ALTER COLUMN status SET DEFAULT 'achado'");
+};
+
+const runRetentionRoutine = async () => {
+  await pool.query(
+    `UPDATE itens
+     SET quem_retirou_nome = 'Anonimizado por politica LGPD',
+         quem_retirou_documento = NULL,
+         motivo_devolucao = 'Registro antigo anonimizado automaticamente.',
+         atualizado_em = NOW()
+     WHERE status = 'entregue'
+       AND data_entrega IS NOT NULL
+       AND data_entrega < NOW() - INTERVAL '365 days'
+       AND (quem_retirou_nome IS DISTINCT FROM 'Anonimizado por politica LGPD'
+            OR quem_retirou_documento IS NOT NULL)`
+  );
 };
 
 const seedDefaultSuperUser = async () => {
@@ -85,6 +106,7 @@ const initializeDatabase = async () => {
       await createTables();
       await ensureCompatibleColumns();
       await seedDefaultSuperUser();
+      await runRetentionRoutine();
       console.log("Banco de dados SIGAP pronto.");
     })().catch((error) => {
       initializationPromise = undefined;
