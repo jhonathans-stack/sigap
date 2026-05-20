@@ -17,7 +17,7 @@ import type {
 } from "@/lib/types";
 import { clearSession, getStoredToken } from "@/lib/storage";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://sigap-backend-ftt8.onrender.com";
 
 type SigapError = AxiosError<{ erro?: string }> & {
   sigapMessage?: string;
