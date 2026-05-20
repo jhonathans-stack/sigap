@@ -7,13 +7,16 @@ import { toast } from "sonner";
 import { LgpdModal } from "@/components/auth/lgpd-modal";
 import { authApi, getApiErrorMessage } from "@/lib/api";
 import { formatCpf, normalizeCpf } from "@/lib/utils";
+import { useAuth } from "@/components/providers/auth-provider";
 
 export function RegisterForm() {
   const router = useRouter();
+  const { setSession } = useAuth();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [cpf, setCpf] = useState("");
+  const [matricula, setMatricula] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -69,7 +72,12 @@ export function RegisterForm() {
     }
 
     if (cpfDigits.length < 11) {
-      toast.error("Informe um CPF valido.");
+      toast.error("Informe um CPF válido.");
+      return;
+    }
+
+    if (matricula.trim().length < 3) {
+      toast.error("Informe sua matricula.");
       return;
     }
 
@@ -81,16 +89,18 @@ export function RegisterForm() {
     setIsSubmitting(true);
 
     try {
-      await authApi.register({
+      const response = await authApi.register({
         nome,
         email,
         senha,
-        cpf: cpfDigits
+        cpf: cpfDigits,
+        matricula: matricula.trim()
       });
+      setSession(response.token, response.usuario);
       toast.success("Cadastro realizado com sucesso.");
-      router.push("/login");
+      router.push("/");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel cadastrar."));
+      toast.error(getApiErrorMessage(error, "Não foi possível cadastrar."));
     } finally {
       setIsSubmitting(false);
     }
@@ -168,7 +178,7 @@ export function RegisterForm() {
               className="sigap-input border-slate-300 bg-slate-100 pl-10 pr-11 dark:border-slate-800 dark:bg-[#020617]"
               value={senha}
               onChange={(event) => setSenha(event.target.value)}
-              placeholder="Minimo de 6 caracteres"
+              placeholder="Mínimo de 6 caracteres"
               disabled={isSubmitting}
               required
             />
@@ -180,6 +190,24 @@ export function RegisterForm() {
             >
               {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="matricula" className="sigap-label">
+            Matricula
+          </label>
+          <div className="relative">
+            <IdCard className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              id="matricula"
+              className="sigap-input border-slate-300 bg-slate-100 pl-10 dark:border-slate-800 dark:bg-[#020617]"
+              value={matricula}
+              onChange={(event) => setMatricula(event.target.value)}
+              placeholder="Ex.: 20252SI0016"
+              disabled={isSubmitting}
+              required
+            />
           </div>
         </div>
 

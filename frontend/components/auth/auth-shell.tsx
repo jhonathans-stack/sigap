@@ -4,8 +4,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const featureItems = [
   { icon: ClipboardList, label: "Cadastro de itens" },
-  { icon: RotateCcw, label: "Controle de devolucao" },
-  { icon: SearchCheck, label: "Consulta rapida" }
+  { icon: RotateCcw, label: "Controle de devolução" },
+  { icon: SearchCheck, label: "Consulta rápida" }
 ];
 
 export function AuthShell({

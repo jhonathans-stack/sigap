@@ -1,34 +1,85 @@
 # Dependencias
 node_modules/
+frontend/node_modules/
 
-# Ambiente
+# Variaveis de ambiente e segredos
 .env
-.env.local
+.env.*
+frontend/.env
+frontend/.env.*
+!.env.example
+!frontend/.env.example
 
-# Build
+# Builds, caches e artefatos gerados
 .next/
+frontend/.next/
 dist/
+build/
+out/
+coverage/
 tsconfig.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
 
-# Uploads
+# Uploads locais
 uploads/*
 !uploads/.gitkeep
 
-# Logs
+# Logs e debug
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+debug.log*
+logs/
 
-# Sistema
+# Sistema, temporarios e backups locais
 .DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.bak
+*.backup
+*.zip
+*.rar
+*.7z
 
-# Vercel
+# Plataformas de deploy locais
 .vercel/
+.render/
 
-# 🔐 ARQUIVOS SENSIVEIS / PESSOAIS
-Relatorio*
-RELATORIO*
-Tutorial*
-PROMPT*
-CREDENCIAIS*
+# Arquivos internos, privados ou sensiveis
 *.txt
+*credencia*
+*Credencia*
+*CREDENCIA*
+*senha*
+*Senha*
+*SENHA*
+*secret*
+*Secret*
+*SECRET*
+*token*
+*Token*
+*TOKEN*
+*prompt*
+*Prompt*
+*PROMPT*
+*relatorio*
+*Relatorio*
+*RELATORIO*
+*tutorial*
+*Tutorial*
+*TUTORIAL*
+*hospedagem*
+*Hospedagem*
+*HOSPEDAGEM*
+*nota*
+*Nota*
+*NOTA*
+*anotacao*
+*Anotacao*
+*ANOTACAO*
+*backup*
+*Backup*
+*BACKUP*

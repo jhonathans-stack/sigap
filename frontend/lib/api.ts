@@ -9,9 +9,10 @@ import type {
   LoginResponse,
   RegisterResponse,
   User,
+  UserCreateResponse,
   UserDeleteResponse
 } from "@/lib/types";
-import { getStoredToken } from "@/lib/storage";
+import { clearSession, getStoredToken } from "@/lib/storage";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -53,6 +54,16 @@ api.interceptors.response.use(
       toast.error(message);
     }
 
+    if (typeof window !== "undefined" && error.response?.status === 401) {
+      const isPublicAuthPage = ["/login", "/register"].includes(window.location.pathname);
+
+      if (!isPublicAuthPage) {
+        clearSession();
+        toast.error("Sessão expirada. Faça login novamente.");
+        window.location.assign("/login");
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -63,7 +74,12 @@ export const authApi = {
     return data;
   },
 
-  async register(payload: { nome: string; email: string; senha: string; cpf: string }) {
+  async me() {
+    const { data } = await api.get<{ usuario: LoginResponse["usuario"] }>("/api/auth/me");
+    return data;
+  },
+
+  async register(payload: { nome: string; email: string; senha: string; cpf: string; matricula: string }) {
     const { data } = await api.post<RegisterResponse>("/api/auth/register", payload);
     return data;
   }
@@ -109,6 +125,11 @@ export const itensApi = {
 export const usuariosApi = {
   async list() {
     const { data } = await api.get<User[]>("/api/usuarios");
+    return data;
+  },
+
+  async createAdmin(payload: { nome: string; email: string; senha: string; cpf: string; matricula: string }) {
+    const { data } = await api.post<UserCreateResponse>("/api/usuarios/admins", payload);
     return data;
   },
 

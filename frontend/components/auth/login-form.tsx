@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LockKeyhole, LogIn, Mail, X } from "lucide-react";
 import { toast } from "sonner";
 import { authApi, getApiErrorMessage } from "@/lib/api";
-import { saveSession } from "@/lib/storage";
+import { useAuth } from "@/components/providers/auth-provider";
 
 const rememberEmailKey = "sigap-remember-email";
 
@@ -17,6 +17,7 @@ type FieldErrors = {
 
 export function LoginForm() {
   const router = useRouter();
+  const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [rememberAccess, setRememberAccess] = useState(false);
@@ -40,7 +41,7 @@ export function LoginForm() {
     if (!email.trim()) {
       nextErrors.email = "Informe seu email.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      nextErrors.email = "Informe um email valido.";
+      nextErrors.email = "Informe um email válido.";
     }
 
     if (!senha.trim()) {
@@ -67,7 +68,7 @@ export function LoginForm() {
 
     try {
       const response = await authApi.login(email, senha);
-      saveSession(response.token, response.usuario);
+      setSession(response.token, response.usuario);
 
       if (rememberAccess) {
         window.localStorage.setItem(rememberEmailKey, email.trim());
@@ -78,7 +79,7 @@ export function LoginForm() {
       toast.success("Login realizado com sucesso.");
       router.push("/");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel entrar."));
+      toast.error(getApiErrorMessage(error, "Não foi possível entrar."));
     } finally {
       setIsSubmitting(false);
     }
@@ -176,7 +177,7 @@ export function LoginForm() {
         </div>
 
         <p className="text-center text-sm text-slate-600 dark:text-slate-400">
-          Ainda nao tem uma conta?{" "}
+          Ainda não tem uma conta?{" "}
           <Link href="/register" className="font-semibold text-blue-700 hover:underline dark:text-blue-400">
             Cadastre-se
           </Link>
@@ -194,7 +195,7 @@ export function LoginForm() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700 dark:text-blue-400">
-                  Recuperacao
+                  Recuperação
                 </p>
                 <h2 id="forgot-password-title" className="mt-2 text-xl font-black text-slate-950 dark:text-white">
                   Esqueceu sua senha?
@@ -211,7 +212,7 @@ export function LoginForm() {
             </div>
 
             <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-400">
-              Para a demonstracao academica, solicite a redefinicao de senha ao administrador responsavel pelo SIGAP.
+              Para a demonstração acadêmica, solicite a redefinição de senha ao administrador responsável pelo SIGAP.
             </p>
 
             <button type="button" onClick={() => setIsForgotModalOpen(false)} className="sigap-primary mt-6 w-full">

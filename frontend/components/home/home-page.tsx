@@ -10,10 +10,11 @@ import { ItemCarousel } from "@/components/items/item-carousel";
 import { ItemDetailsModal } from "@/components/items/item-details-modal";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { getApiErrorMessage, itensApi } from "@/lib/api";
-import type { Item, ItemStatus, User } from "@/lib/types";
-import { canManageItems, getStoredUser } from "@/lib/storage";
+import type { Item, ItemStatus } from "@/lib/types";
+import { useAuth } from "@/components/providers/auth-provider";
+import { canManageItems } from "@/lib/storage";
 
-const categoryOptions = ["documentos", "eletronicos", "material escolar", "roupas", "acessorios", "outros"];
+const categoryOptions = ["documentos", "eletrônicos", "material escolar", "roupas", "acessórios", "outros"];
 
 export function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -24,12 +25,8 @@ export function HomePage() {
   const [status, setStatus] = useState<ItemStatus | "">("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const canManage = canManageItems(user);
-
-  useEffect(() => {
-    setUser(getStoredUser());
-  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search), 350);
@@ -122,8 +119,15 @@ export function HomePage() {
               <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700 dark:text-blue-300">SIGAP</p>
               <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white sm:text-4xl">Itens cadastrados</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Consulte, filtre, atualize e acompanhe os registros do sistema de achados e perdidos.
+                {canManage
+                  ? "Consulte, filtre, atualize e acompanhe os registros do sistema de achados e perdidos."
+                  : "Consulte os itens encontrados, veja detalhes, local, data do achado e situação de devolução."}
               </p>
+              {!canManage ? (
+                <div className="mt-5 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-200">
+                  Modo consulta: seu perfil pode visualizar os itens, mas não pode cadastrar, editar ou excluir registros.
+                </div>
+              ) : null}
               {canManage ? (
                 <Link href="/items/new" className="sigap-primary mt-5">
                   <PlusCircle size={18} />
@@ -180,8 +184,8 @@ export function HomePage() {
                 onChange={(event) => setStatus(event.target.value as ItemStatus | "")}
               >
                 <option value="">Todos os status</option>
-                <option value="achado">achado</option>
-                <option value="entregue">entregue</option>
+                <option value="achado">Aguardando coleta</option>
+                <option value="entregue">Devolvido</option>
               </select>
             </label>
 

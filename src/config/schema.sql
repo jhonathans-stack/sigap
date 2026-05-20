@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   email VARCHAR(160) UNIQUE NOT NULL,
   senha VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super')),
-  cpf VARCHAR(20),
-  matricula VARCHAR(50),
+  cpf VARCHAR(20) NOT NULL,
+  matricula VARCHAR(50) NOT NULL,
   foto_url TEXT,
   criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

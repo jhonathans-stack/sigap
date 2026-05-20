@@ -42,13 +42,13 @@ export function ItemCard({ item, onDetails }: { item: Item; onDetails: (item: It
         {item.descricao ? (
           <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{item.descricao}</p>
         ) : (
-          <p className="mt-4 text-sm text-slate-400">Descricao nao informada.</p>
+          <p className="mt-4 text-sm text-slate-400">Descrição não informada.</p>
         )}
 
         <div className="mt-4 grid gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
           <span className="inline-flex items-center gap-2">
             <MapPin size={14} />
-            {item.local_encontrado || "Local nao informado"}
+            {item.local_encontrado || "Local não informado"}
           </span>
           <span className="inline-flex items-center gap-2">
             <CalendarDays size={14} />

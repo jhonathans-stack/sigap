@@ -1,47 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Header } from "@/components/header";
 import { NewItemForm } from "@/components/items/new-item-form";
-import type { User } from "@/lib/types";
-import { canManageItems, getStoredUser } from "@/lib/storage";
 
 export function NewItemPageContent() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
-
-  useEffect(() => {
-    const storedUser = getStoredUser();
-    setUser(storedUser);
-    setIsChecking(false);
-
-    if (!storedUser) {
-      router.replace("/login");
-      return;
-    }
-
-    if (!canManageItems(storedUser)) {
-      router.replace("/");
-    }
-  }, [router]);
-
-  const canManage = canManageItems(user);
-
-  if (isChecking || !canManage) {
-    return (
-      <main className="min-h-screen">
-        <Header />
-        <section className="mx-auto max-w-6xl px-4 py-8">
-          <div className="sigap-section-band rounded-lg p-6">
-            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Verificando permissao...</p>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen">
       <Header />

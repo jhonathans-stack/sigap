@@ -18,8 +18,10 @@ const publicUserFields = `
 `;
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeCpf = (cpf) => String(cpf || "").replace(/\D/g, "");
+const normalizeText = (value) => String(value || "").trim();
 
-const validateUserPayload = ({ nome, email, senha, role }, partial = false) => {
+const validateUserPayload = ({ nome, email, senha, role, cpf, matricula }, partial = false) => {
   if (!partial || nome !== undefined) {
     if (!nome || String(nome).trim().length < 3) {
       throw new AppError("Nome deve ter pelo menos 3 caracteres.", 400);
@@ -41,17 +43,32 @@ const validateUserPayload = ({ nome, email, senha, role }, partial = false) => {
   if (role !== undefined && !isAllowedRole(role)) {
     throw new AppError("Role deve ser user, admin ou super.", 400);
   }
+
+  if (!partial || cpf !== undefined) {
+    if (normalizeCpf(cpf).length !== 11) {
+      throw new AppError("CPF e obrigatorio e deve conter 11 digitos.", 400);
+    }
+  }
+
+  if (!partial || matricula !== undefined) {
+    if (!matricula || normalizeText(matricula).length < 3) {
+      throw new AppError("Matricula e obrigatoria.", 400);
+    }
+  }
 };
 
-const registerUser = async (payload) => {
-  validateUserPayload(payload);
+const createUser = async (payload, role = "user") => {
+  validateUserPayload({ ...payload, role });
+
+  if (!["user", "admin"].includes(role)) {
+    throw new AppError("Perfil nao permitido para cadastro.", 400);
+  }
 
   const nome = String(payload.nome).trim();
   const email = normalizeEmail(payload.email);
   const senhaHash = await bcrypt.hash(String(payload.senha), SALT_ROUNDS);
-  const role = String(payload.role || "user").trim();
-  const cpf = payload.cpf || null;
-  const matricula = payload.matricula || null;
+  const cpf = normalizeCpf(payload.cpf);
+  const matricula = normalizeText(payload.matricula);
   const fotoUrl = payload.foto_url || null;
 
   const result = await pool.query(
@@ -63,6 +80,10 @@ const registerUser = async (payload) => {
 
   return result.rows[0];
 };
+
+const registerUser = async (payload) => createUser(payload, "user");
+
+const registerAdmin = async (payload) => createUser(payload, "admin");
 
 const loginUser = async (email, senha) => {
   if (!isValidEmail(email) || !senha) {
@@ -88,6 +109,23 @@ const loginUser = async (email, senha) => {
   return user;
 };
 
+const getUserById = async (id) => {
+  const result = await pool.query(
+    `SELECT ${publicUserFields}
+     FROM usuarios
+     WHERE id = $1`,
+    [id]
+  );
+
+  const user = result.rows[0];
+
+  if (!user) {
+    throw new AppError("Usuario nao encontrado.", 404);
+  }
+
+  return user;
+};
+
 const generateToken = (user) => {
   if (!process.env.JWT_SECRET) {
     throw new AppError("JWT_SECRET nao configurado.", 500);
@@ -106,6 +144,8 @@ const generateToken = (user) => {
 
 module.exports = {
   registerUser,
+  registerAdmin,
   loginUser,
+  getUserById,
   generateToken
 };

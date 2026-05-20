@@ -22,7 +22,7 @@ export function getItemImageUrl(imageUrl?: string | null) {
 
 export function formatDate(date?: string | null) {
   if (!date) {
-    return "Nao informado";
+    return "Não informado";
   }
 
   const parsedDate = new Date(date);

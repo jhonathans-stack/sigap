@@ -2,30 +2,68 @@
 
 import type { User } from "@/lib/types";
 
+let memoryToken: string | null = null;
+let memoryUser: User | null = null;
+
+function getBrowserStorage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export function saveSession(token?: string, user?: User) {
   if (token) {
-    window.localStorage.setItem("sigap-token", token);
+    memoryToken = token;
   }
 
   if (user) {
-    window.localStorage.setItem("sigap-user", JSON.stringify(user));
+    memoryUser = user;
+  }
+
+  const storage = getBrowserStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  if (token) {
+    storage.setItem("sigap-token", token);
+  }
+
+  if (user) {
+    storage.setItem("sigap-user", JSON.stringify(user));
   }
 }
 
 export function clearSession() {
-  window.localStorage.removeItem("sigap-token");
-  window.localStorage.removeItem("sigap-user");
+  memoryToken = null;
+  memoryUser = null;
+
+  const storage = getBrowserStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  storage.removeItem("sigap-token");
+  storage.removeItem("sigap-user");
 }
 
 export function getStoredToken() {
-  return window.localStorage.getItem("sigap-token");
+  return getBrowserStorage()?.getItem("sigap-token") || memoryToken;
 }
 
 export function getStoredUser() {
-  const rawUser = window.localStorage.getItem("sigap-user");
+  const rawUser = getStoredToken() ? getBrowserStorage()?.getItem("sigap-user") : null;
 
   if (!rawUser) {
-    return null;
+    return memoryUser;
   }
 
   try {

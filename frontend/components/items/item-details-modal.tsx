@@ -81,7 +81,7 @@ export function ItemDetailsModal({
       toast.success("Item atualizado com sucesso.");
       onUpdated(response.item);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel atualizar o item."));
+      toast.error(getApiErrorMessage(error, "Não foi possível atualizar o item."));
     } finally {
       setIsSaving(false);
     }
@@ -101,11 +101,11 @@ export function ItemDetailsModal({
 
     try {
       await itensApi.remove(item.id);
-      toast.success("Item excluido permanentemente.");
+      toast.success("Item excluído permanentemente.");
       onDeleted(item.id);
       onClose();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel excluir o item."));
+      toast.error(getApiErrorMessage(error, "Não foi possível excluir o item."));
     } finally {
       setIsDeleting(false);
     }
@@ -123,7 +123,7 @@ export function ItemDetailsModal({
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-500 dark:text-slate-400">
               <span className="inline-flex items-center gap-1">
                 <MapPin size={15} />
-                {item.local_encontrado || "Local nao informado"}
+                {item.local_encontrado || "Local não informado"}
               </span>
               <span className="inline-flex items-center gap-1">
                 <CalendarDays size={15} />
@@ -177,7 +177,7 @@ export function ItemDetailsModal({
 
                 <div className="space-y-2">
                   <label htmlFor="edit-status" className="sigap-label">
-                    Status
+                    Situação
                   </label>
                   <select
                     id="edit-status"
@@ -188,8 +188,8 @@ export function ItemDetailsModal({
                     }
                     disabled={isSaving || isDeleting}
                   >
-                    <option value="achado">achado</option>
-                    <option value="entregue">entregue</option>
+                    <option value="achado">Aguardando coleta</option>
+                    <option value="entregue">Devolvido</option>
                   </select>
                 </div>
               </div>
@@ -209,7 +209,7 @@ export function ItemDetailsModal({
 
               <div className="space-y-2">
                 <label htmlFor="edit-descricao" className="sigap-label">
-                  Descricao
+                  Descrição
                 </label>
                 <textarea
                   id="edit-descricao"
@@ -252,7 +252,7 @@ export function ItemDetailsModal({
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <label htmlFor="motivo" className="sigap-label">
-                      Motivo da devolucao
+                      Motivo da devolução
                     </label>
                     <textarea
                       id="motivo"
@@ -270,7 +270,7 @@ export function ItemDetailsModal({
               <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                 <button type="submit" className="sigap-primary flex-1" disabled={isSaving || isDeleting}>
                   <Save size={17} />
-                  {isSaving ? "Salvando..." : "Salvar alteracoes"}
+                  {isSaving ? "Salvando..." : "Salvar alterações"}
                 </button>
                 <button
                   type="button"
@@ -279,36 +279,64 @@ export function ItemDetailsModal({
                   disabled={isSaving || isDeleting}
                 >
                   <Trash2 size={17} />
-                  {isDeleting ? "Excluindo..." : confirmDelete ? "Confirmar exclusao" : "Excluir"}
+                  {isDeleting ? "Excluindo..." : confirmDelete ? "Confirmar exclusão" : "Excluir"}
                 </button>
               </div>
             </form>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                  Categoria
-                </p>
-                <p className="mt-1 font-semibold text-slate-950 dark:text-white">{item.categoria || "Nao informada"}</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                    Local
+                  </p>
+                  <p className="mt-1 font-semibold text-slate-950 dark:text-white">
+                    {item.local_encontrado || "Não informado"}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                    Data do achado
+                  </p>
+                  <p className="mt-1 font-semibold text-slate-950 dark:text-white">{formatDate(item.data_achado)}</p>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                    Situação
+                  </p>
+                  <div className="mt-2">
+                    <StatusBadge status={item.status} />
+                  </div>
+                </div>
               </div>
 
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                  Descricao
+                  Categoria
+                </p>
+                <p className="mt-1 font-semibold text-slate-950 dark:text-white">{item.categoria || "Não informada"}</p>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                  Descrição
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
-                  {item.descricao || "Descricao nao informada."}
+                  {item.descricao || "Descrição não informada."}
                 </p>
               </div>
 
               {item.status === "entregue" ? (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/70 dark:bg-blue-950/30">
                   <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-700 dark:text-blue-300">
-                    Devolucao
+                    Devolução
                   </p>
                   <div className="mt-3 grid gap-3 text-sm text-slate-700 dark:text-slate-300 sm:grid-cols-2">
-                    <span>Retirado por: {item.quem_retirou_nome || "Nao informado"}</span>
-                    <span>Documento: {item.quem_retirou_documento || "Nao informado"}</span>
+                    <span>Retirado por: {item.quem_retirou_nome || "Não informado"}</span>
+                    <span>Documento: {item.quem_retirou_documento || "Não informado"}</span>
+                    <span>Data da entrega: {formatDate(item.data_entrega)}</span>
                   </div>
                 </div>
               ) : null}

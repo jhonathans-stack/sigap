@@ -1,5 +1,15 @@
+const authService = require("../services/authService");
 const userService = require("../services/userService");
 const asyncHandler = require("../utils/asyncHandler");
+
+const createAdmin = asyncHandler(async (req, res) => {
+  const usuario = await authService.registerAdmin(req.body);
+
+  res.status(201).json({
+    mensagem: "Administrador cadastrado com sucesso.",
+    usuario
+  });
+});
 
 const listUsers = asyncHandler(async (req, res) => {
   const usuarios = await userService.listUsers();
@@ -16,6 +26,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  createAdmin,
   listUsers,
   deleteUser
 };

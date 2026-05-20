@@ -19,6 +19,8 @@ services:
         sync: false
       - key: SUPER_USER_NAME
         value: Jhonathan Neves de Sousa
+      - key: SUPER_USER_CPF
+        value: 20252025016
       - key: SUPER_USER_MATRICULA
         value: 20252SI0016
       - key: SUPER_USER_EMAIL

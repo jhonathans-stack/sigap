@@ -4,11 +4,11 @@ import { RegisterForm } from "@/components/auth/register-form";
 export default function RegisterPage() {
   return (
     <AuthShell
-      title="SIGAP Sistema de Gestao de Achados e Perdidos"
-      subtitle="Sistema de Gestao de Achados e Perdidos"
+      title="SIGAP Sistema de Gestão de Achados e Perdidos"
+      subtitle="Sistema de Gestão de Achados e Perdidos"
       footerLink={{
         href: "/login",
-        text: "Ja possui conta?",
+        text: "Já possui conta?",
         label: "Entrar"
       }}
     >

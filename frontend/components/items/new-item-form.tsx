@@ -10,6 +10,7 @@ import type { ItemStatus } from "@/lib/types";
 
 const maxFileSize = 5 * 1024 * 1024;
 const allowedTypes = ["image/jpeg", "image/png"];
+const itemCategoryOptions = ["documentos", "eletrônicos", "material escolar", "roupas", "acessórios", "outros"];
 
 export function NewItemForm() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export function NewItemForm() {
     }
 
     if (file.size > maxFileSize) {
-      toast.error("A imagem deve ter no maximo 5MB.");
+      toast.error("A imagem deve ter no máximo 5MB.");
       event.target.value = "";
       return;
     }
@@ -103,7 +104,7 @@ export function NewItemForm() {
       toast.success("Item cadastrado com sucesso.");
       router.push("/");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel cadastrar o item."));
+      toast.error(getApiErrorMessage(error, "Não foi possível cadastrar o item."));
     } finally {
       setIsSubmitting(false);
     }
@@ -160,14 +161,14 @@ export function NewItemForm() {
 
           <div className="space-y-2">
             <label htmlFor="descricao" className="sigap-label">
-              Descricao
+              Descrição
             </label>
             <textarea
               id="descricao"
               className="sigap-input min-h-28 resize-y"
               value={form.descricao}
               onChange={(event) => setForm((current) => ({ ...current, descricao: event.target.value }))}
-              placeholder="Detalhes que ajudem na identificacao do item"
+              placeholder="Detalhes que ajudem na identificação do item"
               disabled={isSubmitting}
             />
           </div>
@@ -177,20 +178,26 @@ export function NewItemForm() {
               <label htmlFor="categoria" className="sigap-label">
                 Categoria
               </label>
-              <input
+              <select
                 id="categoria"
                 className="sigap-input"
                 value={form.categoria}
                 onChange={(event) => setForm((current) => ({ ...current, categoria: event.target.value }))}
-                placeholder="documentos, eletronicos..."
                 disabled={isSubmitting}
                 required
-              />
+              >
+                <option value="">Selecione uma categoria</option>
+                {itemCategoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="status" className="sigap-label">
-                Status
+                Situação
               </label>
               <select
                 id="status"
@@ -199,8 +206,8 @@ export function NewItemForm() {
                 onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as ItemStatus }))}
                 disabled={isSubmitting}
               >
-                <option value="achado">achado</option>
-                <option value="entregue">entregue</option>
+                <option value="achado">Aguardando coleta</option>
+                <option value="entregue">Devolvido</option>
               </select>
             </div>
           </div>

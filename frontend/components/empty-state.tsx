@@ -9,7 +9,9 @@ export function EmptyState({ message = "Nenhum item encontrado", canCreate = fal
       </div>
       <p className="text-lg font-semibold text-slate-800 dark:text-slate-100">{message}</p>
       <p className="mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
-        {canCreate ? "Ajuste a busca ou cadastre um novo item para que ele apareca por aqui." : "Ajuste a busca para encontrar outros registros."}
+        {canCreate
+          ? "Ajuste a busca ou cadastre um novo item para que ele apareça por aqui."
+          : "Ajuste a busca para encontrar outros registros."}
       </p>
       {canCreate ? (
         <Link href="/items/new" className="sigap-primary mt-5">
