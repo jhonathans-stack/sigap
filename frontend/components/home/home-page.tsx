@@ -1,112 +1,129 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { CircleCheckBig, FilterX, MapPin, PackageCheck, PackageOpen, PlusCircle, RefreshCw, Search } from "lucide-react";
+import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, Filter, Package, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
-import { EmptyState } from "@/components/empty-state";
 import { Header } from "@/components/header";
-import { ItemCarousel } from "@/components/items/item-carousel";
 import { ItemDetailsModal } from "@/components/items/item-details-modal";
-import { LoadingSkeleton } from "@/components/loading-skeleton";
+import { StatusBadge } from "@/components/status-badge";
+import { FigmaButton, FigmaCard } from "@/components/ui/figma-primitives";
 import { getApiErrorMessage, itensApi } from "@/lib/api";
 import type { Item, ItemStatus } from "@/lib/types";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canManageItems } from "@/lib/storage";
+import { formatDate, getItemImageUrl } from "@/lib/utils";
 
-const categoryOptions = ["documentos", "eletronicos", "material escolar", "vestuario", "acessorios", "outros"];
-const locationOptions = ["Patio central", "Biblioteca", "Laboratorios do Monte Castelo", "Cantina", "Secretaria academica", "Auditorio principal"];
+const categories = [
+  { value: "documentos", label: "Documentos" },
+  { value: "eletronicos", label: "Eletronicos" },
+  { value: "material escolar", label: "Material escolar" },
+  { value: "vestuario", label: "Vestuario" },
+  { value: "acessorios", label: "Acessorios" },
+  { value: "outros", label: "Outros" }
+];
+
+const locations = [
+  "Patio central",
+  "Biblioteca",
+  "Laboratorios do Monte Castelo",
+  "Cantina",
+  "Secretaria academica",
+  "Auditorio principal"
+];
+
+const statusOptions = [
+  { value: "achado", label: "Achado" },
+  { value: "aguardando_retirada", label: "Aguardando retirada" },
+  { value: "entregue", label: "Entregue" }
+];
+
+const itemsPerPage = 6;
+
+function formatCategory(category?: string | null) {
+  const normalized = String(category || "").toLowerCase();
+  return categories.find((item) => item.value === normalized)?.label || category || "Sem categoria";
+}
 
 export function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [categoria, setCategoria] = useState("");
-  const [local, setLocal] = useState("");
-  const [status, setStatus] = useState<ItemStatus | "">("");
-  const [ordem, setOrdem] = useState<"recentes" | "antigos">("recentes");
-  const [visibleCount, setVisibleCount] = useState(9);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<ItemStatus | "">("");
+  const [sortOrder, setSortOrder] = useState<"recentes" | "antigos">("recentes");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
   const canManage = canManageItems(user);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(search), 350);
+    const timeout = window.setTimeout(() => setDebouncedSearch(searchTerm), 350);
     return () => window.clearTimeout(timeout);
-  }, [search]);
+  }, [searchTerm]);
 
   const filters = useMemo(
     () => ({
       nome: debouncedSearch,
-      categoria,
-      local,
-      status,
-      ordem
+      categoria: selectedCategory,
+      local: selectedLocation,
+      status: selectedStatus,
+      ordem: sortOrder
     }),
-    [debouncedSearch, categoria, local, status, ordem]
+    [debouncedSearch, selectedCategory, selectedLocation, selectedStatus, sortOrder]
   );
 
-  const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
-
-  const summary = useMemo(
-    () => [
-      {
-        label: "Total",
-        value: items.length,
-        icon: PackageOpen,
-        tone: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-200"
-      },
-      {
-        label: "Achados",
-        value: items.filter((item) => item.status === "achado").length,
-        icon: PackageCheck,
-        tone: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200"
-      },
-      {
-        label: "Entregues",
-        value: items.filter((item) => item.status === "entregue").length,
-        icon: CircleCheckBig,
-        tone: "border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
-      }
-    ],
+  const stats = useMemo(
+    () => ({
+      total: items.length,
+      achados: items.filter((item) => item.status === "achado").length,
+      entregues: items.filter((item) => item.status === "entregue").length
+    }),
     [items]
   );
 
-  const loadItems = useCallback(
+  const totalPages = Math.ceil(items.length / itemsPerPage);
+  const paginatedItems = useMemo(
+    () => items.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
+    [currentPage, items]
+  );
+
+  const fetchItems = useCallback(
     async (showRefresh = false) => {
       if (showRefresh) {
-        setIsRefreshing(true);
+        setRefreshing(true);
       } else {
-        setIsLoading(true);
+        setLoading(true);
       }
 
       try {
         const data = await itensApi.list(filters);
         setItems(data);
-        setVisibleCount(9);
+        setCurrentPage(0);
       } catch (error) {
-        toast.error(getApiErrorMessage(error, "Nao foi possivel carregar os itens."));
+        toast.error(getApiErrorMessage(error, "Erro ao carregar itens."));
       } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
+        setLoading(false);
+        setRefreshing(false);
       }
     },
     [filters]
   );
 
   useEffect(() => {
-    void loadItems(false);
-  }, [loadItems]);
+    void fetchItems(false);
+  }, [fetchItems]);
 
   function clearFilters() {
-    setSearch("");
+    setSearchTerm("");
     setDebouncedSearch("");
-    setCategoria("");
-    setLocal("");
-    setStatus("");
-    setOrdem("recentes");
+    setSelectedCategory("");
+    setSelectedLocation("");
+    setSelectedStatus("");
+    setSortOrder("recentes");
+    setCurrentPage(0);
   }
 
   function handleUpdated(updatedItem: Item) {
@@ -120,138 +137,158 @@ export function HomePage() {
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
 
-      <section className="mx-auto max-w-7xl px-4 py-8">
-        <div className="sigap-section-band overflow-hidden rounded-lg">
-          <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_360px] lg:p-8">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700 dark:text-blue-300">SIGAP</p>
-              <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white sm:text-4xl">Itens cadastrados</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                {canManage
-                  ? "Consulte, filtre e acompanhe os registros do sistema de achados e perdidos."
-                  : "Consulte os itens encontrados, veja detalhes, local, data do achado e situacao de devolucao."}
-              </p>
-              {!canManage ? (
-                <div className="mt-5 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-200">
-                  Modo consulta: seu perfil pode visualizar os itens, mas nao pode cadastrar, editar ou excluir registros.
-                </div>
-              ) : null}
-              {canManage ? (
-                <Link href="/items/new" className="sigap-primary mt-5">
-                  <PlusCircle size={18} />
-                  Cadastrar item
-                </Link>
-              ) : null}
-            </div>
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Itens cadastrados</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {canManage
+              ? "Consulte, filtre e acompanhe os registros do sistema de achados e perdidos"
+              : "Consulte os itens encontrados, veja detalhes, local, data do achado e situacao de devolucao"}
+          </p>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              {summary.map((item) => (
-                <div key={item.label} className={`rounded-lg border p-4 ${item.tone}`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold">{item.label}</span>
-                    <item.icon size={20} />
-                  </div>
-                  <strong className="mt-2 block text-3xl font-black">{item.value}</strong>
-                </div>
-              ))}
+          {!canManage ? (
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                <strong>Modo consulta:</strong> seu perfil pode visualizar os itens, mas nao pode cadastrar, editar ou excluir registros.
+              </p>
             </div>
-          </div>
-          <div className="h-1.5 bg-gradient-to-r from-blue-700 via-emerald-500 to-amber-400" />
+          ) : null}
         </div>
 
-        <section className="sigap-surface mt-6 rounded-lg p-4">
-          <div className="grid gap-3 xl:grid-cols-[1fr_180px_220px_190px_170px_auto_auto]">
-            <label className="relative block">
-              <span className="sr-only">Buscar por nome</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+          <StatCard label="Total" value={stats.total} icon={Package} color="text-blue-500" />
+          <StatCard label="Achados" value={stats.achados} icon={Clock} color="text-green-500" />
+          <StatCard label="Entregues" value={stats.entregues} icon={CheckCircle} color="text-gray-500" />
+        </div>
+
+        <FigmaCard className="mb-8 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Filter className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Filtros</h2>
+          </div>
+
+          <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <label className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               <input
-                className="sigap-input pl-10"
-                placeholder="Buscar por nome"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar item..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pl-10 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
               />
             </label>
 
-            <label>
-              <span className="sr-only">Categoria</span>
-              <select className="sigap-input" value={categoria} onChange={(event) => setCategoria(event.target.value)}>
-                <option value="">Todas as categorias</option>
-                {categoryOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <select
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">Todas as categorias</option>
+              {categories.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
 
-            <label>
-              <span className="sr-only">Local</span>
-              <select className="sigap-input" value={local} onChange={(event) => setLocal(event.target.value)}>
-                <option value="">Todos os locais</option>
-                {locationOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <select
+              value={selectedLocation}
+              onChange={(event) => setSelectedLocation(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">Todos os locais</option>
+              {locations.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
 
-            <label>
-              <span className="sr-only">Status</span>
-              <select
-                className="sigap-input"
-                value={status}
-                onChange={(event) => setStatus(event.target.value as ItemStatus | "")}
-              >
-                <option value="">Todos os status</option>
-                <option value="achado">Aguardando coleta</option>
-                <option value="aguardando_retirada">Aguardando retirada</option>
-                <option value="entregue">Devolvido</option>
-              </select>
-            </label>
-
-            <label>
-              <span className="sr-only">Ordenacao</span>
-              <select className="sigap-input" value={ordem} onChange={(event) => setOrdem(event.target.value as "recentes" | "antigos")}>
-                <option value="recentes">Mais recentes</option>
-                <option value="antigos">Mais antigos</option>
-              </select>
-            </label>
-
-            <button type="button" className="sigap-secondary" onClick={clearFilters}>
-              <FilterX size={17} />
-              Limpar
-            </button>
-
-            <button type="button" className="sigap-secondary" onClick={() => loadItems(true)} disabled={isRefreshing}>
-              <RefreshCw size={17} className={isRefreshing ? "animate-spin" : ""} />
-              Atualizar
-            </button>
+            <select
+              value={selectedStatus}
+              onChange={(event) => setSelectedStatus(event.target.value as ItemStatus | "")}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">Todos os status</option>
+              {statusOptions.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
           </div>
-        </section>
 
-        <section className="mt-8">
-          {isLoading ? (
-            <LoadingSkeleton />
-          ) : items.length ? (
-            <>
-              <ItemCarousel items={visibleItems} onDetails={setSelectedItem} />
-              {visibleCount < items.length ? (
-                <div className="mt-6 flex justify-center">
-                  <button type="button" className="sigap-secondary" onClick={() => setVisibleCount((current) => current + 9)}>
-                    <MapPin size={17} />
-                    Carregar mais itens
-                  </button>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <EmptyState canCreate={canManage} />
-          )}
-        </section>
+          <div className="flex flex-wrap gap-3">
+            <select
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value as "recentes" | "antigos")}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="recentes">Mais recentes</option>
+              <option value="antigos">Mais antigos</option>
+            </select>
+
+            <FigmaButton type="button" variant="secondary" onClick={clearFilters}>
+              Limpar
+            </FigmaButton>
+
+            <FigmaButton type="button" variant="secondary" onClick={() => fetchItems(true)} disabled={refreshing}>
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              Atualizar
+            </FigmaButton>
+          </div>
+        </FigmaCard>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
+          </div>
+        ) : paginatedItems.length === 0 ? (
+          <FigmaCard className="p-12 text-center">
+            <AlertCircle className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+            <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">Nenhum item encontrado</h3>
+            <p className="text-gray-600 dark:text-gray-400">Tente ajustar os filtros ou limpar a busca</p>
+          </FigmaCard>
+        ) : (
+          <>
+            <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {paginatedItems.map((item) => (
+                <ItemGridCard key={item.id} item={item} onDetails={setSelectedItem} />
+              ))}
+            </div>
+
+            {totalPages > 1 ? (
+              <div className="flex items-center justify-center gap-4">
+                <FigmaButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCurrentPage((page) => Math.max(0, page - 1))}
+                  disabled={currentPage === 0}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                  Anterior
+                </FigmaButton>
+
+                <span className="text-gray-700 dark:text-gray-300">
+                  Pagina {currentPage + 1} de {totalPages}
+                </span>
+
+                <FigmaButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages - 1, page + 1))}
+                  disabled={currentPage === totalPages - 1}
+                >
+                  Proximo
+                  <ChevronRight className="h-5 w-5" />
+                </FigmaButton>
+              </div>
+            ) : null}
+          </>
+        )}
       </section>
 
       <ItemDetailsModal
@@ -262,5 +299,61 @@ export function HomePage() {
         onDeleted={handleDeleted}
       />
     </main>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: typeof Package; color: string }) {
+  return (
+    <FigmaCard className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="mb-1 text-sm text-gray-600 dark:text-gray-400">{label}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
+        </div>
+        <Icon className={`h-12 w-12 ${color}`} />
+      </div>
+    </FigmaCard>
+  );
+}
+
+function ItemGridCard({ item, onDetails }: { item: Item; onDetails: (item: Item) => void }) {
+  const imageUrl = getItemImageUrl(item.imagem_url);
+  const isDelivered = item.status === "entregue";
+
+  return (
+    <FigmaCard className={`overflow-hidden ${isDelivered ? "opacity-60" : ""}`} onClick={() => onDetails(item)}>
+      <div className="relative h-48 bg-gray-200 dark:bg-gray-700">
+        {imageUrl ? (
+          <img src={imageUrl} alt={item.nome_item} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Package className="h-16 w-16 text-gray-400" />
+          </div>
+        )}
+        {isDelivered ? (
+          <div className="absolute right-2 top-2 rounded-full bg-gray-800/90 px-3 py-1 text-sm font-medium text-white">
+            Devolvido
+          </div>
+        ) : null}
+      </div>
+
+      <div className="p-4">
+        <h3 className="mb-2 line-clamp-2 text-lg font-semibold text-gray-900 dark:text-white">{item.nome_item}</h3>
+
+        <div className="mb-3 space-y-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <StatusBadge status={item.status} />
+            <span>{formatCategory(item.categoria)}</span>
+          </div>
+
+          <p className="text-sm text-gray-600 dark:text-gray-400">Local: {item.local_encontrado || "Nao informado"}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Data: {formatDate(item.data_achado)}</p>
+        </div>
+
+        <FigmaButton type="button" variant="ghost" className="w-full">
+          Ver detalhes
+        </FigmaButton>
+      </div>
+    </FigmaCard>
   );
 }

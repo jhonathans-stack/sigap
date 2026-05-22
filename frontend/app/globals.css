@@ -23,13 +23,8 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0 18%, transparent 18% 100%),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
-    linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
-  background-size: auto, 42px 42px, 42px 42px, auto;
-  color: #172033;
+  background: #f9fafb;
+  color: #111827;
   transition:
     background 0.3s ease-in-out,
     background-color 0.3s ease-in-out,
@@ -37,13 +32,8 @@ body {
 }
 
 .dark body {
-  background:
-    linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0 18%, transparent 18% 100%),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px),
-    linear-gradient(180deg, #0b1220 0%, #111827 100%);
-  background-size: auto, 42px 42px, 42px 42px, auto;
-  color: #e5eefb;
+  background: #111827;
+  color: #f3f4f6;
 }
 
 button,

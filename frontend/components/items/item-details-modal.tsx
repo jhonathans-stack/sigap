@@ -160,15 +160,15 @@ export function ItemDetailsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/65 p-4">
-      <div className="mx-auto my-8 w-full max-w-5xl rounded-xl border border-slate-200 bg-white shadow-soft dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-slate-800">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
+      <div className="mx-auto my-8 w-full max-w-6xl rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-6 dark:border-gray-700">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-xl font-bold text-slate-950 dark:text-white">{item.nome_item}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{item.nome_item}</h2>
               <StatusBadge status={item.status} />
             </div>
-            <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-500 dark:text-slate-400">
+            <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-500 dark:text-gray-400">
               <span className="inline-flex items-center gap-1">
                 <MapPin size={15} />
                 {item.local_encontrado || "Local nao informado"}
@@ -180,17 +180,22 @@ export function ItemDetailsModal({
             </div>
           </div>
 
-          <button type="button" onClick={onClose} className="sigap-secondary h-9 w-9 px-0" aria-label="Fechar">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            aria-label="Fechar"
+          >
             <X size={17} />
           </button>
         </div>
 
-        <div className="grid gap-6 p-5 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+        <div className="grid gap-8 p-6 lg:grid-cols-2">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-700">
             {imageUrl ? (
               <img src={imageUrl} alt={item.nome_item} className="h-full min-h-80 w-full object-cover" />
             ) : (
-              <div className="flex min-h-80 items-center justify-center text-sm text-slate-500">Sem imagem</div>
+              <div className="flex min-h-80 items-center justify-center text-sm text-gray-500">Sem imagem</div>
             )}
           </div>
 
@@ -227,16 +232,16 @@ export function ItemDetailsModal({
                 <textarea id="edit-descricao" className="sigap-input min-h-24 resize-y" value={form.descricao} onChange={(event) => setForm((current) => ({ ...current, descricao: event.target.value }))} disabled={isSaving || isDeleting} required />
               </div>
 
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-100">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
                 Para concluir a devolucao, altere a situacao para "Aguardando retirada". O item so vira "Devolvido" depois que o usuario confirmar o recebimento.
               </div>
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-                <button type="submit" className="sigap-primary flex-1" disabled={isSaving || isDeleting}>
+                <button type="submit" className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-70" disabled={isSaving || isDeleting}>
                   <Save size={17} />
                   {isSaving ? "Salvando..." : "Salvar alteracoes"}
                 </button>
-                <button type="button" className="sigap-danger flex-1" onClick={handleDelete} disabled={isSaving || isDeleting}>
+                <button type="button" className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-70" onClick={handleDelete} disabled={isSaving || isDeleting}>
                   <Trash2 size={17} />
                   {isDeleting ? "Excluindo..." : confirmDelete ? "Confirmar exclusao" : "Excluir"}
                 </button>
@@ -259,7 +264,7 @@ export function ItemDetailsModal({
                 <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">{item.descricao || "Descricao nao informada."}</p>
               </div>
 
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-100">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
                 {item.status === "achado" ? "Proximo passo: solicite a devolucao pelo sistema e aguarde a separacao pela secretaria." : null}
                 {item.status === "aguardando_retirada" && canConfirmReceipt ? "Proximo passo: retire o item na secretaria e confirme o recebimento abaixo." : null}
                 {item.status === "aguardando_retirada" && !canConfirmReceipt ? "Este item ja esta aguardando retirada por uma solicitacao em andamento." : null}
@@ -267,20 +272,20 @@ export function ItemDetailsModal({
               </div>
 
               {item.status === "achado" ? (
-                <button type="button" className="sigap-primary w-full" onClick={handleRequestReturn} disabled={isRequesting}>
+                <button type="button" className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-70" onClick={handleRequestReturn} disabled={isRequesting}>
                   <HandHeart size={17} />
                   {isRequesting ? "Solicitando..." : "Solicitar devolucao"}
                 </button>
               ) : null}
 
               {canConfirmReceipt ? (
-                <button type="button" className="sigap-primary w-full" onClick={handleConfirmReceipt} disabled={isRequesting}>
+                <button type="button" className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-70" onClick={handleConfirmReceipt} disabled={isRequesting}>
                   <CheckCircle2 size={17} />
                   {isRequesting ? "Confirmando..." : "Confirmar recebimento"}
                 </button>
               ) : null}
 
-              <button type="button" className="sigap-secondary w-full" onClick={onClose}>Fechar</button>
+              <button type="button" className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" onClick={onClose}>Fechar</button>
             </div>
           )}
         </div>
@@ -291,9 +296,9 @@ export function ItemDetailsModal({
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-      <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-1 font-semibold text-slate-950 dark:text-white">{value}</p>
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+      <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="mt-1 font-semibold text-gray-900 dark:text-white">{value}</p>
     </div>
   );
 }

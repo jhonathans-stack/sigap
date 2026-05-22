@@ -1,16 +1,25 @@
-import Link from "next/link";
-import { ClipboardList, RotateCcw, SearchCheck } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { CheckCircle, FileText, Search } from "lucide-react";
 
 const featureItems = [
-  { icon: ClipboardList, label: "Cadastro de itens" },
-  { icon: RotateCcw, label: "Controle de devolução" },
-  { icon: SearchCheck, label: "Consulta rápida" }
+  {
+    icon: FileText,
+    title: "Cadastro de itens",
+    description: "Registre objetos encontrados com fotos e descricoes detalhadas"
+  },
+  {
+    icon: CheckCircle,
+    title: "Controle de devolucao",
+    description: "Acompanhe solicitacoes e confirmacoes de entrega"
+  },
+  {
+    icon: Search,
+    title: "Consulta rapida",
+    description: "Busque e filtre itens por categoria, local e status"
+  }
 ];
 
 export function AuthShell({
   children,
-  subtitle,
   footerLink
 }: {
   children: React.ReactNode;
@@ -19,72 +28,63 @@ export function AuthShell({
   footerLink: { href: string; label: string; text: string };
 }) {
   const isLogin = footerLink.href === "/register";
-  const heading = isLogin ? "Entrar no SIGAP" : "Criar conta";
+
+  if (!isLogin) {
+    return (
+      <main className="min-h-screen bg-gray-50 px-4 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
+          <div className="mb-8 text-center">
+            <h1 className="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Criar conta no SIGAP</h1>
+            <p className="text-gray-600 dark:text-gray-400">Preencha seus dados para acessar o sistema</p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+            {children}
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(135deg,#eaf1fb_0%,#f1f5f9_52%,#e7f7ef_100%)] px-4 py-5 text-slate-950 dark:bg-[linear-gradient(135deg,#0f172a_0%,#020617_100%)] sm:px-6">
-      <div className="mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-6xl overflow-hidden rounded-lg border border-slate-300/70 bg-slate-100/80 shadow-[0_20px_70px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/90 dark:shadow-[0_18px_60px_rgba(0,0,0,0.55)] lg:grid-cols-[1.08fr_0.92fr]">
-        <section className="relative flex min-h-[27rem] flex-col justify-center overflow-hidden bg-[linear-gradient(135deg,#2563eb_0%,#047857_100%)] p-5 text-white dark:bg-[linear-gradient(135deg,#1e3a8a_0%,#065f46_100%)] sm:min-h-[32rem] sm:p-9 lg:min-h-full lg:p-12">
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[length:38px_38px]" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-emerald-300" />
+    <main className="flex min-h-screen">
+      <section className="hidden w-1/2 flex-col justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-green-700 p-12 lg:flex">
+        <div className="max-w-xl">
+          <h1 className="mb-4 text-6xl font-bold text-white">SIGAP</h1>
+          <p className="mb-2 text-2xl text-blue-100">Sistema de Gestao de Achados e Perdidos</p>
+          <p className="mb-12 text-lg text-blue-200">Gerencie itens encontrados de forma simples e organizada</p>
 
-          <div className="relative">
-            <div className="mb-9 flex justify-end sm:mb-14">
-              <ThemeToggle />
-            </div>
-
-            <div className="max-w-xl">
-              <h1 className="text-5xl font-black leading-none tracking-tight text-white sm:text-7xl lg:text-8xl">
-                SIGAP
-              </h1>
-              <p className="mt-6 text-lg font-semibold leading-7 text-cyan-50/90 sm:mt-8 sm:text-2xl sm:leading-8">
-                {subtitle}
-              </p>
-              <p className="mt-4 max-w-md text-sm leading-6 text-slate-100/80 sm:mt-5">
-                Gerencie itens encontrados de forma simples e organizada
-              </p>
-            </div>
-
-            <div className="mt-7 grid gap-2 sm:mt-10 sm:grid-cols-3 sm:gap-3">
-              {featureItems.map((item) => (
-                <div
-                  key={item.label}
-                  className="sigap-feature-card flex items-center gap-3 rounded-lg border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur hover:-translate-y-[3px] sm:block sm:p-4"
-                >
-                  <item.icon size={20} className="shrink-0 text-emerald-200" />
-                  <span className="block text-sm font-semibold leading-5 text-white sm:mt-3">{item.label}</span>
+          <div className="space-y-4">
+            {featureItems.map((item) => (
+              <div key={item.title} className="flex items-start gap-4 rounded-lg bg-white/10 p-4 backdrop-blur-sm">
+                <item.icon className="mt-1 h-6 w-6 flex-shrink-0 text-blue-200" />
+                <div>
+                  <h3 className="mb-1 font-semibold text-white">{item.title}</h3>
+                  <p className="text-sm text-blue-200">{item.description}</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="flex flex-1 flex-col justify-center bg-slate-100/80 p-5 dark:bg-[#020617] sm:p-8 lg:p-10">
-          <div className="mx-auto w-full max-w-md">
-            <div className="mb-6">
-              <p className="text-sm font-bold uppercase tracking-[0.16em] text-blue-700 dark:text-blue-400">
-                {isLogin ? "Acesso ao sistema" : "Novo acesso"}
-              </p>
-              <h2 className="mt-2 text-3xl font-black text-slate-950 dark:text-white">{heading}</h2>
+      <section className="flex w-full items-center justify-center bg-gray-50 p-8 dark:bg-gray-900 lg:w-1/2">
+        <div className="w-full max-w-md">
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-8">
+              <div className="mb-2 text-sm font-medium text-blue-600 dark:text-blue-400">Acesso seguro</div>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Entrar no SIGAP</h2>
             </div>
 
-            <div className="sigap-auth-card rounded-lg border border-slate-300/80 bg-slate-50/90 p-5 shadow-[0_14px_45px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-[#0b1220] dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] sm:p-6">
-              {children}
-            </div>
-
-            {!isLogin ? (
-              <p className="mt-5 text-center text-sm text-slate-600 dark:text-slate-400">
-                {footerLink.text}{" "}
-                <Link href={footerLink.href} className="font-semibold text-blue-700 hover:underline dark:text-blue-400">
-                  {footerLink.label}
-                </Link>
-              </p>
-            ) : null}
+            {children}
           </div>
-        </section>
-      </div>
 
-      <footer className="py-4 text-center text-xs font-medium text-slate-500 dark:text-slate-500">SIGAP 2026</footer>
+          <div className="mt-8 text-center lg:hidden">
+            <h3 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">SIGAP</h3>
+            <p className="text-gray-600 dark:text-gray-400">Sistema de Gestao de Achados e Perdidos</p>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

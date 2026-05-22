@@ -2,25 +2,28 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, CalendarDays, FileSearch, ImagePlus, MapPin, Save, SearchCheck, X } from "lucide-react";
-import Link from "next/link";
+import { AlertTriangle, Package, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { StatusBadge } from "@/components/status-badge";
+import { FigmaButton, FigmaCard, FigmaInput, FigmaModal, FigmaSelect, FigmaTextarea } from "@/components/ui/figma-primitives";
 import { getApiErrorMessage, lostItemsApi } from "@/lib/api";
 import type { Item } from "@/lib/types";
 import { formatDate, getItemImageUrl } from "@/lib/utils";
 
 const maxFileSize = 5 * 1024 * 1024;
 const allowedTypes = ["image/jpeg", "image/png"];
-const categoryOptions = ["documentos", "eletronicos", "material escolar", "vestuario", "acessorios", "outros"];
-const locationOptions = [
+const categories = ["Documentos", "Eletronicos", "Material escolar", "Vestuario", "Acessorios", "Outros"];
+const locations = [
   "Patio central",
   "Biblioteca",
   "Laboratorios do Monte Castelo",
   "Cantina",
   "Secretaria academica",
-  "Auditorio principal",
-  "Outro local"
+  "Auditorio principal"
+];
+const turnos = [
+  { value: "manha", label: "Manha" },
+  { value: "tarde", label: "Tarde" },
+  { value: "noite", label: "Noite" }
 ];
 
 const emptyForm = {
@@ -36,13 +39,12 @@ export function LostItemForm() {
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingMatches, setIsCheckingMatches] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [checkingMatches, setCheckingMatches] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
-  const [matches, setMatches] = useState<Item[]>([]);
+  const [matchedItems, setMatchedItems] = useState<Item[]>([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
-  const [confirmedNoMatch, setConfirmedNoMatch] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -63,12 +65,12 @@ export function LostItemForm() {
 
     if (!file) {
       setImageFile(null);
-      setImagePreview(null);
+      setImagePreview("");
       return;
     }
 
     if (!allowedTypes.includes(file.type)) {
-      toast.error("A imagem deve ser JPG ou PNG.");
+      toast.error("Por favor, selecione uma imagem valida.");
       event.target.value = "";
       return;
     }
@@ -91,54 +93,78 @@ export function LostItemForm() {
     const nextErrors: string[] = [];
 
     if (form.nome_item.trim().length < 2) {
-      nextErrors.push("Informe o nome ou titulo do objeto.");
+      nextErrors.push("Nome do objeto e obrigatorio.");
     }
 
     if (!form.categoria) {
-      nextErrors.push("Selecione uma categoria.");
+      nextErrors.push("Categoria e obrigatoria.");
     }
 
     if (!form.data_perda) {
-      nextErrors.push("Informe a data do sumico.");
+      nextErrors.push("Data do sumico e obrigatoria.");
     }
 
     if (!form.turno) {
-      nextErrors.push("Selecione o turno do sumico.");
+      nextErrors.push("Turno e obrigatorio.");
     }
 
     if (!form.local_provavel) {
-      nextErrors.push("Selecione o local provavel.");
+      nextErrors.push("Local provavel e obrigatorio.");
     }
 
     if (form.caracteristicas.trim().length < 5) {
-      nextErrors.push("Descreva uma caracteristica marcante do objeto.");
+      nextErrors.push("Caracteristicas marcantes sao obrigatorias.");
     }
 
     return nextErrors;
   }
 
-  async function saveLostRequest() {
-    const formData = new FormData();
-    formData.append("nome_item", form.nome_item.trim());
-    formData.append("categoria", form.categoria);
-    formData.append("data_perda", form.data_perda);
-    formData.append("turno", form.turno);
-    formData.append("local_provavel", form.local_provavel);
-    formData.append("caracteristicas", form.caracteristicas.trim());
+  async function saveAlert() {
+    const data = new FormData();
+    data.append("nome_item", form.nome_item.trim());
+    data.append("categoria", form.categoria);
+    data.append("data_perda", form.data_perda);
+    data.append("turno", form.turno);
+    data.append("local_provavel", form.local_provavel);
+    data.append("caracteristicas", form.caracteristicas.trim());
 
     if (imageFile) {
-      formData.append("imagem", imageFile);
+      data.append("imagem", imageFile);
     }
 
-    const response = await lostItemsApi.create(formData);
-    toast.success(response.mensagem || "Alerta cadastrado com sucesso.");
-    router.replace("/requests");
+    await lostItemsApi.create(data);
+    toast.success("Alerta cadastrado com sucesso.");
+    router.push("/requests");
+  }
+
+  async function checkMatches() {
+    setCheckingMatches(true);
+
+    try {
+      const matches = await lostItemsApi.matches({
+        nome_item: form.nome_item.trim(),
+        categoria: form.categoria,
+        local_provavel: form.local_provavel,
+        caracteristicas: form.caracteristicas.trim()
+      });
+
+      if (matches.length > 0) {
+        setMatchedItems(matches);
+        setShowMatchModal(true);
+      } else {
+        await saveAlert();
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Erro ao verificar itens."));
+    } finally {
+      setCheckingMatches(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (isSubmitting || isCheckingMatches) {
+    if (loading || checkingMatches) {
       return;
     }
 
@@ -150,290 +176,217 @@ export function LostItemForm() {
       return;
     }
 
-    if (!confirmedNoMatch) {
-      setIsCheckingMatches(true);
-
-      try {
-        const foundMatches = await lostItemsApi.matches({
-          nome_item: form.nome_item.trim(),
-          categoria: form.categoria,
-          local_provavel: form.local_provavel,
-          caracteristicas: form.caracteristicas.trim()
-        });
-
-        if (foundMatches.length) {
-          setMatches(foundMatches);
-          setShowMatchModal(true);
-          return;
-        }
-      } catch (error) {
-        toast.error(getApiErrorMessage(error, "Nao foi possivel verificar itens parecidos."));
-      } finally {
-        setIsCheckingMatches(false);
-      }
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await saveLostRequest();
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel cadastrar o alerta."));
-    } finally {
-      setIsSubmitting(false);
-    }
+    setErrors([]);
+    await checkMatches();
   }
 
-  async function continueAfterMatches() {
-    setConfirmedNoMatch(true);
-    setShowMatchModal(false);
-    setIsSubmitting(true);
+  async function continueSavingAlert() {
+    setLoading(true);
 
     try {
-      await saveLostRequest();
+      await saveAlert();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel cadastrar o alerta."));
+      toast.error(getApiErrorMessage(error, "Erro ao cadastrar alerta."));
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
+      setShowMatchModal(false);
     }
   }
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="sigap-surface overflow-hidden rounded-lg" noValidate>
-        <div className="h-1.5 bg-gradient-to-r from-blue-700 via-emerald-500 to-amber-400" />
-        <div className="grid gap-6 p-5 lg:grid-cols-[0.85fr_1.15fr]">
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-lg border border-dashed border-blue-200 bg-blue-50/70 dark:border-blue-900/70 dark:bg-blue-950/20">
-              {imagePreview ? (
-                <img src={imagePreview} alt="Preview do objeto perdido" className="aspect-[4/3] w-full object-cover" />
-              ) : (
-                <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 text-blue-700 dark:text-blue-300">
-                  <ImagePlus size={44} />
-                  <span className="text-sm font-semibold">Imagem opcional</span>
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-1">
+            <FigmaCard className="sticky top-24 p-6">
+              <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Imagem (opcional)</h3>
+
+              <div className="mb-4">
+                {imagePreview ? (
+                  <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                    <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800">
+                    <Package className="h-16 w-16 text-gray-400" />
+                  </div>
+                )}
+              </div>
+
+              <label className="cursor-pointer">
+                <div className="flex items-center justify-center gap-2 rounded-lg bg-gray-200 px-4 py-3 text-gray-900 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
+                  <Upload className="h-5 w-5" />
+                  <span>{imageFile ? "Alterar imagem" : "Adicionar imagem"}</span>
                 </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="lost-image" className="sigap-label">
-                Upload de imagem
+                <input type="file" accept="image/jpeg,image/png" onChange={handleImageChange} className="hidden" disabled={loading || checkingMatches} />
               </label>
-              <input
-                id="lost-image"
-                type="file"
-                accept="image/jpeg,image/png"
-                className="sigap-input"
-                onChange={handleImageChange}
-                disabled={isSubmitting || isCheckingMatches}
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400">Opcional. Use JPG ou PNG com ate 5MB.</p>
-            </div>
 
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/25 dark:text-amber-100">
-              Ao cadastrar o alerta, o SIGAP verifica automaticamente se ja existe um item parecido registrado como achado.
-            </div>
+              {imageFile ? <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">{imageFile.name}</p> : null}
+            </FigmaCard>
           </div>
 
-          <div className="space-y-4">
-            {errors.length ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200">
-                {errors.map((error) => (
-                  <p key={error}>{error}</p>
-                ))}
-              </div>
-            ) : null}
+          <div className="lg:col-span-2">
+            <FigmaCard className="p-6">
+              <h3 className="mb-6 font-semibold text-gray-900 dark:text-white">Informacoes do item perdido</h3>
 
-            <label className="space-y-2">
-              <span className="sigap-label">Nome ou titulo do objeto</span>
-              <input
-                className="sigap-input"
-                value={form.nome_item}
-                onChange={(event) => {
-                  setForm((current) => ({ ...current, nome_item: event.target.value }));
-                  clearErrors();
-                }}
-                placeholder="Ex.: Caderno de 10 materias"
-                disabled={isSubmitting || isCheckingMatches}
-                required
-                aria-invalid={errors.some((error) => error.includes("nome"))}
-              />
-            </label>
+              <div className="space-y-6">
+                {errors.length ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200">
+                    {errors.map((error) => (
+                      <p key={error}>{error}</p>
+                    ))}
+                  </div>
+                ) : null}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="sigap-label">Categoria</span>
-                <select
-                  className="sigap-input"
+                <FigmaInput
+                  type="text"
+                  label="Nome/Titulo do objeto *"
+                  placeholder="Ex: Carteira marrom"
+                  value={form.nome_item}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, nome_item: event.target.value }));
+                    clearErrors();
+                  }}
+                  disabled={loading || checkingMatches}
+                  invalid={errors.some((error) => error.includes("Nome"))}
+                  required
+                />
+
+                <FigmaSelect
+                  label="Categoria *"
                   value={form.categoria}
                   onChange={(event) => {
                     setForm((current) => ({ ...current, categoria: event.target.value }));
                     clearErrors();
                   }}
-                  disabled={isSubmitting || isCheckingMatches}
+                  disabled={loading || checkingMatches}
+                  invalid={errors.some((error) => error.includes("Categoria"))}
                   required
-                  aria-invalid={errors.some((error) => error.includes("categoria"))}
                 >
-                  <option value="">Selecione</option>
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
+                  <option value="">Selecione uma categoria</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
                     </option>
                   ))}
-                </select>
-              </label>
+                </FigmaSelect>
 
-              <label className="space-y-2">
-                <span className="sigap-label">Data do sumico</span>
-                <span className="relative block">
-                  <CalendarDays className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="date"
-                    className="sigap-input pl-10"
-                    value={form.data_perda}
-                    onChange={(event) => {
-                      setForm((current) => ({ ...current, data_perda: event.target.value }));
-                      clearErrors();
-                    }}
-                    disabled={isSubmitting || isCheckingMatches}
-                    required
-                    aria-invalid={errors.some((error) => error.includes("data"))}
-                  />
-                </span>
-              </label>
-            </div>
+                <FigmaInput
+                  type="date"
+                  label="Data do sumico *"
+                  value={form.data_perda}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, data_perda: event.target.value }));
+                    clearErrors();
+                  }}
+                  disabled={loading || checkingMatches}
+                  invalid={errors.some((error) => error.includes("Data"))}
+                  required
+                />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="sigap-label">Turno</span>
-                <select
-                  className="sigap-input"
+                <FigmaSelect
+                  label="Turno *"
                   value={form.turno}
                   onChange={(event) => {
                     setForm((current) => ({ ...current, turno: event.target.value }));
                     clearErrors();
                   }}
-                  disabled={isSubmitting || isCheckingMatches}
+                  disabled={loading || checkingMatches}
+                  invalid={errors.some((error) => error.includes("Turno"))}
                   required
-                  aria-invalid={errors.some((error) => error.includes("turno"))}
                 >
-                  <option value="">Selecione</option>
-                  <option value="manha">Manha</option>
-                  <option value="tarde">Tarde</option>
-                  <option value="noite">Noite</option>
-                </select>
-              </label>
+                  <option value="">Selecione o turno</option>
+                  {turnos.map((turno) => (
+                    <option key={turno.value} value={turno.value}>
+                      {turno.label}
+                    </option>
+                  ))}
+                </FigmaSelect>
 
-              <label className="space-y-2">
-                <span className="sigap-label">Local provavel</span>
-                <span className="relative block">
-                  <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <select
-                    className="sigap-input pl-10"
-                    value={form.local_provavel}
-                    onChange={(event) => {
-                      setForm((current) => ({ ...current, local_provavel: event.target.value }));
-                      clearErrors();
-                    }}
-                    disabled={isSubmitting || isCheckingMatches}
-                    required
-                    aria-invalid={errors.some((error) => error.includes("local"))}
-                  >
-                    <option value="">Selecione</option>
-                    {locationOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </span>
-              </label>
-            </div>
+                <FigmaSelect
+                  label="Local provavel *"
+                  value={form.local_provavel}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, local_provavel: event.target.value }));
+                    clearErrors();
+                  }}
+                  disabled={loading || checkingMatches}
+                  invalid={errors.some((error) => error.includes("Local"))}
+                  required
+                >
+                  <option value="">Selecione o local</option>
+                  {locations.map((location) => (
+                    <option key={location} value={location}>
+                      {location}
+                    </option>
+                  ))}
+                </FigmaSelect>
 
-            <label className="space-y-2">
-              <span className="sigap-label">Caracteristicas marcantes</span>
-              <textarea
-                className="sigap-input min-h-28 resize-y"
-                value={form.caracteristicas}
-                onChange={(event) => {
-                  setForm((current) => ({ ...current, caracteristicas: event.target.value }));
-                  clearErrors();
-                }}
-                placeholder="Ex.: Tem um adesivo do Batman na capa"
-                disabled={isSubmitting || isCheckingMatches}
-                required
-                aria-invalid={errors.some((error) => error.includes("caracteristica"))}
-              />
-            </label>
+                <FigmaTextarea
+                  label="Caracteristicas marcantes *"
+                  placeholder="Descreva cores, marcas, estado, detalhes que ajudem a identificar o item..."
+                  rows={4}
+                  value={form.caracteristicas}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, caracteristicas: event.target.value }));
+                    clearErrors();
+                  }}
+                  disabled={loading || checkingMatches}
+                  invalid={errors.some((error) => error.includes("Caracteristicas"))}
+                  required
+                />
 
-            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-              <Link href="/" className="sigap-secondary flex-1">
-                <ArrowLeft size={17} />
-                Voltar
-              </Link>
-              <button type="submit" className="sigap-primary flex-1" disabled={isSubmitting || isCheckingMatches}>
-                {isCheckingMatches ? <SearchCheck size={17} className="animate-pulse" /> : <Save size={17} />}
-                {isCheckingMatches ? "Verificando..." : isSubmitting ? "Salvando..." : "Cadastrar alerta"}
-              </button>
-            </div>
+                <div className="flex gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">
+                  <FigmaButton type="button" variant="secondary" onClick={() => router.push("/")} className="flex-1" disabled={loading || checkingMatches}>
+                    Cancelar
+                  </FigmaButton>
+                  <FigmaButton type="submit" className="flex-1" loading={checkingMatches || loading}>
+                    {checkingMatches ? "Verificando..." : loading ? "Salvando..." : "Cadastrar alerta"}
+                  </FigmaButton>
+                </div>
+              </div>
+            </FigmaCard>
           </div>
         </div>
       </form>
 
-      {showMatchModal ? (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 p-4">
-          <div className="mx-auto my-8 max-w-5xl rounded-xl border border-slate-200 bg-white shadow-soft dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-slate-800">
-              <div>
-                <p className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em] text-amber-700 dark:text-amber-300">
-                  <AlertTriangle size={18} />
-                  Pre-match imediato
-                </p>
-                <h2 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">Encontramos itens parecidos</h2>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                  Veja se algum deles parece ser o seu antes de salvar o alerta.
-                </p>
-              </div>
-              <button type="button" className="sigap-secondary h-9 w-9 px-0" onClick={() => setShowMatchModal(false)} aria-label="Fechar">
-                <X size={17} />
-              </button>
-            </div>
+      <FigmaModal isOpen={showMatchModal} onClose={() => setShowMatchModal(false)} title="Itens parecidos encontrados" size="lg">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+            <AlertTriangle className="h-6 w-6 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              Encontramos itens parecidos com o que voce descreveu. Veja se algum deles e o seu antes de salvar o alerta.
+            </p>
+          </div>
 
-            <div className="flex gap-4 overflow-x-auto p-5">
-              {matches.map((item) => {
-                const imageUrl = getItemImageUrl(item.imagem_url);
+          <div className="grid max-h-96 grid-cols-1 gap-4 overflow-y-auto md:grid-cols-2">
+            {matchedItems.map((item) => {
+              const imageUrl = getItemImageUrl(item.imagem_url);
 
-                return (
-                  <article key={item.id} className="min-w-[260px] rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
-                    {imageUrl ? (
-                      <img src={imageUrl} alt={item.nome_item} className="aspect-[4/3] w-full rounded-lg object-cover" />
-                    ) : (
-                      <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-slate-200 text-sm text-slate-500 dark:bg-slate-800">Sem imagem</div>
-                    )}
-                    <h3 className="mt-3 line-clamp-1 text-base font-black text-slate-950 dark:text-white">{item.nome_item}</h3>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{item.categoria || "Sem categoria"}</p>
-                    <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-                      <span>{formatDate(item.data_achado)}</span>
-                      <StatusBadge status={item.status} />
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+              return (
+                <FigmaCard key={item.id} className="p-4">
+                  {imageUrl ? <img src={imageUrl} alt={item.nome_item} className="mb-3 h-32 w-full rounded-lg object-cover" /> : null}
+                  <h4 className="mb-2 font-semibold text-gray-900 dark:text-white">{item.nome_item}</h4>
+                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                    <p>{item.categoria}</p>
+                    <p>Local: {item.local_encontrado || "Nao informado"}</p>
+                    <p>Data: {formatDate(item.data_achado)}</p>
+                  </div>
+                </FigmaCard>
+              );
+            })}
+          </div>
 
-            <div className="flex flex-col gap-3 border-t border-slate-200 p-5 dark:border-slate-800 sm:flex-row sm:justify-end">
-              <Link href="/" className="sigap-secondary">
-                <FileSearch size={17} />
-                Ver vitrine de achados
-              </Link>
-              <button type="button" className="sigap-primary" onClick={continueAfterMatches} disabled={isSubmitting}>
-                <Save size={17} />
-                {isSubmitting ? "Salvando..." : "Nao e meu item, salvar alerta"}
-              </button>
-            </div>
+          <div className="flex gap-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+            <FigmaButton type="button" variant="secondary" onClick={() => router.push("/")} className="flex-1">
+              Ver vitrine de achados
+            </FigmaButton>
+            <FigmaButton type="button" onClick={continueSavingAlert} loading={loading} className="flex-1">
+              {loading ? "Salvando..." : "Nao e meu item, salvar alerta"}
+            </FigmaButton>
           </div>
         </div>
-      ) : null}
+      </FigmaModal>
     </>
   );
 }

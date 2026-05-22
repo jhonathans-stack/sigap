@@ -2,6 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
+  ArrowUpCircle,
   Crown,
   IdCard,
   LockKeyhole,
@@ -17,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { Header } from "@/components/header";
 import { useAuth } from "@/components/providers/auth-provider";
+import { FigmaCard } from "@/components/ui/figma-primitives";
 import { getApiErrorMessage, usuariosApi } from "@/lib/api";
 import { canDeleteUsers, canViewUsers } from "@/lib/storage";
 import type { User as SigapUser } from "@/lib/types";
@@ -32,6 +35,7 @@ const emptyAdminForm = {
 };
 
 type UserTab = "admins" | "common";
+type PendingUserAction = { type: "delete" | "promote"; user: SigapUser } | null;
 
 function roleLabel(role: SigapUser["role"]) {
   if (role === "super") {
@@ -119,20 +123,19 @@ function AdminCreationPanel({ onCreated }: { onCreated: (user: SigapUser) => voi
   }
 
   return (
-    <form onSubmit={handleSubmit} className="sigap-surface mt-6 overflow-hidden rounded-lg" noValidate>
-      <div className="h-1.5 bg-gradient-to-r from-blue-700 via-emerald-500 to-amber-400" />
-      <div className="p-5 sm:p-6">
+    <form
+      onSubmit={handleSubmit}
+      className="mt-8 overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+      noValidate
+    >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
-              Cadastro restrito
-            </p>
-            <h2 className="mt-1 text-2xl font-black text-slate-950 dark:text-white">Novo administrador</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Novo administrador</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-gray-400">
               Apenas superusuarios podem criar contas administrativas. Todos os campos abaixo sao obrigatorios.
             </p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
             <ShieldPlus size={26} />
           </div>
         </div>
@@ -224,12 +227,15 @@ function AdminCreationPanel({ onCreated }: { onCreated: (user: SigapUser) => voi
         </div>
 
         <div className="mt-5 flex justify-end">
-          <button type="submit" className="sigap-primary min-w-56" disabled={isSubmitting}>
+          <button
+            type="submit"
+            className="inline-flex min-w-56 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-70"
+            disabled={isSubmitting}
+          >
             <ShieldPlus size={18} />
             {isSubmitting ? "Cadastrando..." : "Cadastrar administrador"}
           </button>
         </div>
-      </div>
     </form>
   );
 }
@@ -238,8 +244,7 @@ export function UserManagementPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<SigapUser[]>([]);
   const [activeTab, setActiveTab] = useState<UserTab>("admins");
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [confirmPromoteId, setConfirmPromoteId] = useState<number | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingUserAction>(null);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -286,110 +291,107 @@ export function UserManagementPage() {
     setActiveTab("admins");
   }
 
-  async function handleDelete(user: SigapUser) {
+  function requestDelete(user: SigapUser) {
     if (!canDelete || busyUserId || user.role === "super" || user.id === currentUser?.id) {
       return;
     }
 
-    if (confirmDeleteId !== user.id) {
-      setConfirmDeleteId(user.id);
-      setConfirmPromoteId(null);
-      return;
-    }
-
-    setBusyUserId(user.id);
-
-    try {
-      await usuariosApi.remove(user.id);
-      setUsers((currentUsers) => currentUsers.filter((current) => current.id !== user.id));
-      setConfirmDeleteId(null);
-      toast.success("Usuario excluido com sucesso.");
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel excluir usuario."));
-    } finally {
-      setBusyUserId(null);
-    }
+    setPendingAction({ type: "delete", user });
   }
 
-  async function handlePromote(user: SigapUser) {
+  function requestPromote(user: SigapUser) {
     if (!canPromote || busyUserId || user.role !== "admin" || user.id === currentUser?.id) {
       return;
     }
 
-    if (confirmPromoteId !== user.id) {
-      setConfirmPromoteId(user.id);
-      setConfirmDeleteId(null);
+    setPendingAction({ type: "promote", user });
+  }
+
+  async function confirmPendingAction() {
+    if (!pendingAction || busyUserId) {
       return;
     }
 
+    const { type, user } = pendingAction;
     setBusyUserId(user.id);
 
     try {
-      const response = await usuariosApi.promoteToSuper(user.id);
-      setUsers((currentUsers) => currentUsers.map((current) => (current.id === user.id ? response.usuario : current)));
-      setConfirmPromoteId(null);
-      toast.success("Administrador promovido para superusuario.");
+      if (type === "delete") {
+        await usuariosApi.remove(user.id);
+        setUsers((currentUsers) => currentUsers.filter((current) => current.id !== user.id));
+        toast.success("Usuario excluido com sucesso.");
+      } else {
+        const response = await usuariosApi.promoteToSuper(user.id);
+        setUsers((currentUsers) => currentUsers.map((current) => (current.id === user.id ? response.usuario : current)));
+        toast.success("Administrador promovido para superusuario.");
+      }
+
+      setPendingAction(null);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel promover o administrador."));
+      toast.error(
+        getApiErrorMessage(
+          error,
+          type === "delete" ? "Nao foi possivel excluir usuario." : "Nao foi possivel promover o administrador."
+        )
+      );
     } finally {
       setBusyUserId(null);
     }
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
 
-      <section className="mx-auto max-w-6xl px-4 py-8">
-        <div className="sigap-section-band overflow-hidden rounded-lg">
-          <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_420px]">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700 dark:text-blue-300">
-                Administracao
-              </p>
-              <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white">Usuarios do sistema</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Consulte usuarios comuns, administre contas administrativas e conceda acesso super apenas quando necessario.
-              </p>
-            </div>
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Usuarios do sistema</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Gerencie permissoes e controle de acesso
+          </p>
+        </div>
 
-            <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-2">
-              <Summary label="Total" value={totals.all} icon={UsersRound} />
-              <Summary label="Super" value={totals.supers} icon={Crown} />
-              <Summary label="Admins" value={totals.admins} icon={ShieldCheck} />
-              <Summary label="Comuns" value={totals.common} icon={UserRoundCog} />
-            </div>
-          </div>
-          <div className="h-1.5 bg-gradient-to-r from-blue-700 via-emerald-500 to-amber-400" />
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
+          <Summary label="Total" value={totals.all} icon={UsersRound} />
+          <Summary label="Super" value={totals.supers} icon={Crown} />
+          <Summary label="Admins" value={totals.admins} icon={ShieldCheck} />
+          <Summary label="Comuns" value={totals.common} icon={UserRoundCog} />
         </div>
 
         {canDelete ? <AdminCreationPanel onCreated={handleAdminCreated} /> : null}
 
-        <section className="mt-6">
-          <div className="sigap-surface rounded-lg p-2">
-            <div className="grid gap-2 sm:grid-cols-2">
+        <section className="mt-8">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-200 dark:border-gray-700">
+              <div className="flex">
               <button
                 type="button"
-                className={activeTab === "admins" ? "sigap-primary" : "sigap-secondary"}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                  activeTab === "admins"
+                    ? "border-b-2 border-blue-600 bg-white text-blue-600 dark:bg-gray-800 dark:text-blue-400"
+                    : "bg-gray-50 text-gray-600 hover:text-gray-900 dark:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
                 onClick={() => setActiveTab("admins")}
               >
-                <ShieldCheck size={17} />
                 Administradores e superusuarios
               </button>
               <button
                 type="button"
-                className={activeTab === "common" ? "sigap-primary" : "sigap-secondary"}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                  activeTab === "common"
+                    ? "border-b-2 border-blue-600 bg-white text-blue-600 dark:bg-gray-800 dark:text-blue-400"
+                    : "bg-gray-50 text-gray-600 hover:text-gray-900 dark:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
                 onClick={() => setActiveTab("common")}
               >
-                <UsersRound size={17} />
                 Usuarios comuns
               </button>
+              </div>
             </div>
-          </div>
 
-          <div className="mt-4 grid gap-3">
+            <div className="grid gap-3 p-6">
             {isLoading ? (
-              <div className="sigap-surface rounded-lg p-5 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <div className="rounded-lg p-5 text-sm font-semibold text-gray-600 dark:text-gray-300">
                 Carregando usuarios...
               </div>
             ) : visibleUsers.length ? (
@@ -400,21 +402,31 @@ export function UserManagementPage() {
                   currentUser={currentUser}
                   canDelete={canDelete}
                   canPromote={canPromote}
-                  confirmDeleteId={confirmDeleteId}
-                  confirmPromoteId={confirmPromoteId}
                   busyUserId={busyUserId}
-                  onDelete={handleDelete}
-                  onPromote={handlePromote}
+                  onDelete={requestDelete}
+                  onPromote={requestPromote}
                 />
               ))
             ) : (
-              <div className="sigap-surface rounded-lg p-8 text-center text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <div className="rounded-lg p-8 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">
                 Nenhum usuario encontrado nesta aba.
               </div>
             )}
+            </div>
           </div>
         </section>
       </section>
+
+      <ConfirmUserActionModal
+        action={pendingAction}
+        isBusy={Boolean(busyUserId)}
+        onCancel={() => {
+          if (!busyUserId) {
+            setPendingAction(null);
+          }
+        }}
+        onConfirm={confirmPendingAction}
+      />
     </main>
   );
 }
@@ -440,12 +452,12 @@ function AdminInput({
 }) {
   return (
     <label className="space-y-2">
-      <span className="sigap-label">{label}</span>
+      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
       <span className="relative block">
         <Icon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
         <input
           type={type}
-          className="sigap-input pl-10"
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pl-10 text-gray-900 transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
@@ -460,13 +472,15 @@ function AdminInput({
 
 function Summary({ label, value, icon: Icon }: { label: string; value: number; icon: LucideIcon }) {
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-100">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold">{label}</span>
-        <Icon size={22} />
+    <FigmaCard className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="mb-1 text-sm text-gray-600 dark:text-gray-400">{label}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
+        </div>
+        <Icon className="h-12 w-12 text-blue-500" />
       </div>
-      <strong className="mt-2 block text-3xl font-black">{value}</strong>
-    </div>
+    </FigmaCard>
   );
 }
 
@@ -475,8 +489,6 @@ function UserRow({
   currentUser,
   canDelete,
   canPromote,
-  confirmDeleteId,
-  confirmPromoteId,
   busyUserId,
   onDelete,
   onPromote
@@ -485,8 +497,6 @@ function UserRow({
   currentUser: SigapUser | null;
   canDelete: boolean;
   canPromote: boolean;
-  confirmDeleteId: number | null;
-  confirmPromoteId: number | null;
   busyUserId: number | null;
   onDelete: (user: SigapUser) => void;
   onPromote: (user: SigapUser) => void;
@@ -496,18 +506,18 @@ function UserRow({
   const isBusy = busyUserId === user.id;
 
   return (
-    <article className="sigap-surface rounded-lg p-4 hover:-translate-y-1 hover:shadow-lg">
+    <article className="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-700/50">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-lg font-bold text-slate-950 dark:text-white">{user.nome}</h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <h2 className="truncate text-lg font-semibold text-gray-900 dark:text-white">{user.nome}</h2>
+            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
               {user.role === "super" ? <Crown size={14} /> : user.role === "admin" ? <ShieldCheck size={14} /> : <UserRoundCog size={14} />}
               {roleLabel(user.role)}
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{user.email}</p>
-          <p className="mt-2 grid gap-1 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-2">
+          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{user.email}</p>
+          <p className="mt-2 grid gap-1 text-xs text-gray-500 dark:text-gray-400 sm:grid-cols-2">
             <span>CPF: {user.cpf ? formatCpf(user.cpf) : "Nao informado"}</span>
             <span>Matricula: {user.matricula || "Nao informada"}</span>
           </p>
@@ -515,24 +525,100 @@ function UserRow({
 
         <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
           {canPromoteThisUser ? (
-            <button type="button" className="sigap-primary min-w-48" onClick={() => onPromote(user)} disabled={Boolean(busyUserId)}>
-              <Crown size={17} />
-              {isBusy ? "Promovendo..." : confirmPromoteId === user.id ? "Confirmar superusuario" : "Tornar superusuario"}
+            <button type="button" className="inline-flex min-w-48 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-70" onClick={() => onPromote(user)} disabled={Boolean(busyUserId)}>
+              <ArrowUpCircle size={17} />
+              {isBusy ? "Promovendo..." : "Tornar superusuario"}
             </button>
           ) : null}
 
           {canRemoveThisUser ? (
-            <button type="button" className="sigap-danger min-w-40" onClick={() => onDelete(user)} disabled={Boolean(busyUserId)}>
+            <button type="button" className="inline-flex min-w-40 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-70" onClick={() => onDelete(user)} disabled={Boolean(busyUserId)}>
               <Trash2 size={17} />
-              {isBusy ? "Excluindo..." : confirmDeleteId === user.id ? "Confirmar exclusao" : "Excluir usuario"}
+              {isBusy ? "Excluindo..." : "Excluir usuario"}
             </button>
           ) : (
-            <span className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <span className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
               {user.role === "super" ? "Protegido" : "Somente consulta"}
             </span>
           )}
         </div>
       </div>
     </article>
+  );
+}
+
+function ConfirmUserActionModal({
+  action,
+  isBusy,
+  onCancel,
+  onConfirm
+}: {
+  action: PendingUserAction;
+  isBusy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!action) {
+    return null;
+  }
+
+  const isDelete = action.type === "delete";
+  const title = isDelete ? "Confirmar exclusao" : "Confirmar acesso super";
+  const description = isDelete
+    ? `Tem certeza que deseja excluir ${action.user.nome}? Essa acao remove o acesso do usuario ao SIGAP.`
+    : `Tem certeza que deseja promover ${action.user.nome} para superusuario? Esse perfil tera acesso total ao sistema.`;
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <section className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-start gap-4">
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${
+                isDelete
+                  ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                  : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+              }`}
+            >
+              {isDelete ? <AlertTriangle size={25} /> : <Crown size={25} />}
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">{description}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-900">
+            <p className="font-bold text-gray-900 dark:text-white">{action.user.nome}</p>
+            <p className="mt-1 text-gray-600 dark:text-gray-300">{action.user.email}</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+              {roleLabel(action.user.role)}
+            </p>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 disabled:opacity-70 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              onClick={onCancel}
+              disabled={isBusy}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-70 ${
+                isDelete ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"
+              }`}
+              onClick={onConfirm}
+              disabled={isBusy}
+            >
+              {isDelete ? <Trash2 size={17} /> : <Crown size={17} />}
+              {isBusy ? (isDelete ? "Excluindo..." : "Promovendo...") : isDelete ? "Excluir" : "Promover"}
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

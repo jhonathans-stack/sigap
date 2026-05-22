@@ -2,22 +2,28 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, ImagePlus, MapPin, Save } from "lucide-react";
-import Link from "next/link";
+import { Package, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { FigmaButton, FigmaCard, FigmaInput, FigmaSelect, FigmaTextarea } from "@/components/ui/figma-primitives";
 import { getApiErrorMessage, itensApi } from "@/lib/api";
 
 const maxFileSize = 5 * 1024 * 1024;
 const allowedTypes = ["image/jpeg", "image/png"];
-const itemCategoryOptions = ["documentos", "eletronicos", "material escolar", "vestuario", "acessorios", "outros"];
-const locationOptions = [
+const categories = [
+  { value: "Documentos", label: "Documentos" },
+  { value: "Eletronicos", label: "Eletronicos" },
+  { value: "Material escolar", label: "Material escolar" },
+  { value: "Vestuario", label: "Vestuario" },
+  { value: "Acessorios", label: "Acessorios" },
+  { value: "Outros", label: "Outros" }
+];
+const locations = [
   "Patio central",
   "Biblioteca",
   "Laboratorios do Monte Castelo",
   "Cantina",
   "Secretaria academica",
-  "Auditorio principal",
-  "Outro local"
+  "Auditorio principal"
 ];
 
 const emptyForm = {
@@ -32,8 +38,8 @@ export function NewItemForm() {
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
   useEffect(() => {
@@ -55,12 +61,12 @@ export function NewItemForm() {
 
     if (!file) {
       setImageFile(null);
-      setImagePreview(null);
+      setImagePreview("");
       return;
     }
 
     if (!allowedTypes.includes(file.type)) {
-      toast.error("A imagem deve ser JPG ou PNG.");
+      toast.error("Por favor, selecione uma imagem valida (JPG ou PNG).");
       event.target.value = "";
       return;
     }
@@ -75,36 +81,36 @@ export function NewItemForm() {
       URL.revokeObjectURL(imagePreview);
     }
 
-    clearErrors();
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+    clearErrors();
   }
 
   function validateForm() {
     const nextErrors: string[] = [];
 
     if (form.nome_item.trim().length < 2) {
-      nextErrors.push("Informe o nome do item com pelo menos 2 caracteres.");
+      nextErrors.push("Nome do item e obrigatorio.");
     }
 
     if (form.descricao.trim().length < 5) {
-      nextErrors.push("Informe uma descricao com pelo menos 5 caracteres.");
+      nextErrors.push("Descricao e obrigatoria.");
     }
 
-    if (!form.categoria.trim()) {
-      nextErrors.push("Selecione uma categoria.");
+    if (!form.categoria) {
+      nextErrors.push("Categoria e obrigatoria.");
     }
 
-    if (!form.local_encontrado.trim()) {
-      nextErrors.push("Selecione o local onde o item foi encontrado.");
+    if (!form.local_encontrado) {
+      nextErrors.push("Local encontrado e obrigatorio.");
     }
 
     if (!form.data_achado) {
-      nextErrors.push("Informe a data em que o item foi encontrado.");
+      nextErrors.push("Data do achado e obrigatoria.");
     }
 
     if (!imageFile) {
-      nextErrors.push("Selecione uma imagem JPG ou PNG do item.");
+      nextErrors.push("Imagem do item e obrigatoria.");
     }
 
     return nextErrors;
@@ -113,7 +119,7 @@ export function NewItemForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (isSubmitting) {
+    if (loading) {
       return;
     }
 
@@ -128,8 +134,8 @@ export function NewItemForm() {
     const formData = new FormData();
     formData.append("nome_item", form.nome_item.trim());
     formData.append("descricao", form.descricao.trim());
-    formData.append("categoria", form.categoria.trim());
-    formData.append("local_encontrado", form.local_encontrado.trim());
+    formData.append("categoria", form.categoria);
+    formData.append("local_encontrado", form.local_encontrado);
     formData.append("data_achado", form.data_achado);
     formData.append("status", "achado");
 
@@ -137,187 +143,157 @@ export function NewItemForm() {
       formData.append("imagem", imageFile);
     }
 
-    setIsSubmitting(true);
+    setLoading(true);
 
     try {
       await itensApi.create(formData);
       toast.success("Item cadastrado com sucesso.");
       router.replace("/");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Nao foi possivel cadastrar o item."));
+      toast.error(getApiErrorMessage(error, "Erro ao cadastrar item."));
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="sigap-surface overflow-hidden rounded-lg" noValidate>
-      <div className="h-1.5 bg-gradient-to-r from-blue-700 via-emerald-500 to-amber-400" />
-      <div className="grid gap-6 p-5 lg:grid-cols-[0.85fr_1.15fr]">
-        <div className="space-y-4">
-          <div className="overflow-hidden rounded-lg border border-dashed border-blue-200 bg-blue-50/70 dark:border-blue-900/70 dark:bg-blue-950/20">
-            {imagePreview ? (
-              <img src={imagePreview} alt="Preview do item" className="aspect-[4/3] w-full object-cover" />
-            ) : (
-              <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 text-blue-700 dark:text-blue-300">
-                <ImagePlus size={44} />
-                <span className="text-sm font-semibold">Preview da imagem</span>
-              </div>
-            )}
-          </div>
+    <form onSubmit={handleSubmit} noValidate>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          <FigmaCard className="sticky top-24 p-6">
+            <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Imagem do item</h3>
 
-          <div className="space-y-2">
-            <label htmlFor="imagem" className="sigap-label">
-              Upload de imagem
+            <div className="mb-4">
+              {imagePreview ? (
+                <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                  <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <div className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800">
+                  <Package className="h-16 w-16 text-gray-400" />
+                </div>
+              )}
+            </div>
+
+            <label className="cursor-pointer">
+              <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-white transition-colors hover:bg-blue-700">
+                <Upload className="h-5 w-5" />
+                <span>{imageFile ? "Alterar imagem" : "Selecionar imagem"}</span>
+              </div>
+              <input type="file" accept="image/jpeg,image/png,image/jpg" onChange={handleImageChange} className="hidden" required disabled={loading} />
             </label>
-            <input
-              id="imagem"
-              type="file"
-              accept="image/jpeg,image/png"
-              onChange={handleImageChange}
-              className="sigap-input"
-              disabled={isSubmitting}
-              required
-              aria-invalid={errors.some((error) => error.includes("imagem"))}
-            />
-            <p className="text-xs text-slate-500 dark:text-slate-400">Apenas JPG ou PNG, com limite de 5MB.</p>
-          </div>
+
+            {imageFile ? <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">{imageFile.name}</p> : null}
+          </FigmaCard>
         </div>
 
-        <div className="space-y-4">
-          {errors.length ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200">
-              {errors.map((error) => (
-                <p key={error}>{error}</p>
-              ))}
-            </div>
-          ) : null}
+        <div className="lg:col-span-2">
+          <FigmaCard className="p-6">
+            <h3 className="mb-6 font-semibold text-gray-900 dark:text-white">Informacoes do item</h3>
 
-          <div className="space-y-2">
-            <label htmlFor="nome-item" className="sigap-label">
-              Nome do item
-            </label>
-            <input
-              id="nome-item"
-              className="sigap-input"
-              value={form.nome_item}
-              onChange={(event) => {
-                setForm((current) => ({ ...current, nome_item: event.target.value }));
-                clearErrors();
-              }}
-              placeholder="Ex.: Carteira preta"
-              disabled={isSubmitting}
-              required
-              aria-invalid={errors.some((error) => error.includes("nome"))}
-            />
-          </div>
+            <div className="space-y-6">
+              {errors.length ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200">
+                  {errors.map((error) => (
+                    <p key={error}>{error}</p>
+                  ))}
+                </div>
+              ) : null}
 
-          <div className="space-y-2">
-            <label htmlFor="descricao" className="sigap-label">
-              Descricao
-            </label>
-            <textarea
-              id="descricao"
-              className="sigap-input min-h-28 resize-y"
-              value={form.descricao}
-              onChange={(event) => {
-                setForm((current) => ({ ...current, descricao: event.target.value }));
-                clearErrors();
-              }}
-              placeholder="Detalhes que ajudem na identificacao do item"
-              disabled={isSubmitting}
-              required
-              aria-invalid={errors.some((error) => error.includes("descricao"))}
-            />
-          </div>
+              <FigmaInput
+                type="text"
+                name="nome_item"
+                label="Nome do item *"
+                placeholder="Ex: Carteira marrom"
+                value={form.nome_item}
+                onChange={(event) => {
+                  setForm((current) => ({ ...current, nome_item: event.target.value }));
+                  clearErrors();
+                }}
+                disabled={loading}
+                invalid={errors.some((error) => error.includes("Nome"))}
+                required
+              />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="categoria" className="sigap-label">
-                Categoria
-              </label>
-              <select
-                id="categoria"
-                className="sigap-input"
+              <FigmaTextarea
+                name="descricao"
+                label="Descricao *"
+                placeholder="Descreva caracteristicas, marcas, estado de conservacao..."
+                rows={4}
+                value={form.descricao}
+                onChange={(event) => {
+                  setForm((current) => ({ ...current, descricao: event.target.value }));
+                  clearErrors();
+                }}
+                disabled={loading}
+                invalid={errors.some((error) => error.includes("Descricao"))}
+                required
+              />
+
+              <FigmaSelect
+                name="categoria"
+                label="Categoria *"
                 value={form.categoria}
                 onChange={(event) => {
                   setForm((current) => ({ ...current, categoria: event.target.value }));
                   clearErrors();
                 }}
-                disabled={isSubmitting}
+                disabled={loading}
+                invalid={errors.some((error) => error.includes("Categoria"))}
                 required
-                aria-invalid={errors.some((error) => error.includes("categoria"))}
               >
                 <option value="">Selecione uma categoria</option>
-                {itemCategoryOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+                {categories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
                   </option>
                 ))}
-              </select>
-            </div>
+              </FigmaSelect>
 
-            <div className="space-y-2">
-              <label htmlFor="data-achado" className="sigap-label">
-                Data do achado
-              </label>
-              <span className="relative block">
-                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  id="data-achado"
-                  type="date"
-                  className="sigap-input pl-10"
-                  value={form.data_achado}
-                  onChange={(event) => {
-                    setForm((current) => ({ ...current, data_achado: event.target.value }));
-                    clearErrors();
-                  }}
-                  disabled={isSubmitting}
-                  required
-                  aria-invalid={errors.some((error) => error.includes("data"))}
-                />
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="local" className="sigap-label">
-              Local encontrado
-            </label>
-            <span className="relative block">
-              <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <select
-                id="local"
-                className="sigap-input pl-10"
+              <FigmaSelect
+                name="local_encontrado"
+                label="Local encontrado *"
                 value={form.local_encontrado}
                 onChange={(event) => {
                   setForm((current) => ({ ...current, local_encontrado: event.target.value }));
                   clearErrors();
                 }}
-                disabled={isSubmitting}
+                disabled={loading}
+                invalid={errors.some((error) => error.includes("Local"))}
                 required
-                aria-invalid={errors.some((error) => error.includes("local"))}
               >
                 <option value="">Selecione o local</option>
-                {locationOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+                {locations.map((location) => (
+                  <option key={location} value={location}>
+                    {location}
                   </option>
                 ))}
-              </select>
-            </span>
-          </div>
+              </FigmaSelect>
 
-          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-            <Link href="/" className="sigap-secondary flex-1">
-              <ArrowLeft size={17} />
-              Voltar
-            </Link>
-            <button type="submit" className="sigap-primary flex-1" disabled={isSubmitting}>
-              <Save size={17} />
-              {isSubmitting ? "Salvando..." : "Salvar item"}
-            </button>
-          </div>
+              <FigmaInput
+                type="date"
+                name="data_achado"
+                label="Data do achado *"
+                value={form.data_achado}
+                onChange={(event) => {
+                  setForm((current) => ({ ...current, data_achado: event.target.value }));
+                  clearErrors();
+                }}
+                disabled={loading}
+                invalid={errors.some((error) => error.includes("Data"))}
+                required
+              />
+
+              <div className="flex gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">
+                <FigmaButton type="button" variant="secondary" onClick={() => router.push("/")} className="flex-1" disabled={loading}>
+                  Cancelar
+                </FigmaButton>
+                <FigmaButton type="submit" className="flex-1" loading={loading}>
+                  {loading ? "Salvando..." : "Salvar item"}
+                </FigmaButton>
+              </div>
+            </div>
+          </FigmaCard>
         </div>
       </div>
     </form>

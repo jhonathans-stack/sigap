@@ -83,8 +83,10 @@ export function AuthGuard({
 
   if (isLoading || isChecking) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 text-slate-700 dark:bg-slate-950 dark:text-slate-200">
-        <div className="sigap-surface rounded-lg p-6 text-sm font-semibold">Verificando sessão...</div>
+      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 text-gray-700 dark:bg-gray-900 dark:text-gray-200">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm font-semibold shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          Verificando sessao...
+        </div>
       </main>
     );
   }
