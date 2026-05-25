@@ -103,7 +103,14 @@ const promoteAdminToSuper = async (id, requester) => {
     acao: "admin_promovido_para_super",
     entidade: "usuarios",
     entidadeId: userId,
-    detalhes: { email: result.rows[0].email }
+    detalhes: {
+      promovido_email: result.rows[0].email,
+      promovido_nome: result.rows[0].nome,
+      promovido_id: result.rows[0].id,
+      operador_email: requester.email,
+      operador_nome: requester.nome,
+      operador_id: requester.id
+    }
   });
 
   return result.rows[0];

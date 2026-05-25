@@ -33,6 +33,11 @@ export function formatDate(date?: string | null) {
     return "Nao informado";
   }
 
+  const onlyDate = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  if (onlyDate) {
+    return `${onlyDate[3]}/${onlyDate[2]}/${onlyDate[1]}`;
+  }
+
   const parsedDate = new Date(date);
 
   if (Number.isNaN(parsedDate.getTime())) {

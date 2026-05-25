@@ -40,6 +40,10 @@ const statusOptions = [
 
 const itemsPerPage = 6;
 
+function getVisualStatus(item: Item) {
+  return item.status_visual || item.status;
+}
+
 function formatCategory(category?: string | null) {
   const normalized = String(category || "").toLowerCase();
   return categories.find((item) => item.value === normalized)?.label || category || "Sem categoria";
@@ -79,10 +83,10 @@ export function HomePage() {
   const stats = useMemo(
     () => ({
       total: items.length,
-      achados: items.filter((item) => item.status === "achado").length,
-      perdidos: items.filter((item) => item.status === "perdido").length,
-      aguardando: items.filter((item) => item.status === "aguardando_coleta").length,
-      devolvidos: items.filter((item) => item.status === "devolvido").length
+      achados: items.filter((item) => getVisualStatus(item) === "achado").length,
+      perdidos: items.filter((item) => getVisualStatus(item) === "perdido").length,
+      aguardando: items.filter((item) => getVisualStatus(item) === "aguardando_coleta").length,
+      devolvidos: items.filter((item) => getVisualStatus(item) === "devolvido").length
     }),
     [items]
   );
@@ -324,7 +328,8 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
 function ItemGridCard({ item, onDetails }: { item: Item; onDetails: (item: Item) => void }) {
   const imageUrls = getItemImageUrls(item.imagens_urls, item.imagem_url);
   const imageUrl = imageUrls[0];
-  const isDelivered = item.status === "devolvido";
+  const visualStatus = getVisualStatus(item);
+  const isDelivered = visualStatus === "devolvido";
 
   return (
     <FigmaCard className={`overflow-hidden ${isDelivered ? "opacity-60" : ""}`} onClick={() => onDetails(item)}>
@@ -348,7 +353,7 @@ function ItemGridCard({ item, onDetails }: { item: Item; onDetails: (item: Item)
 
         <div className="mb-3 space-y-2">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <StatusBadge status={item.status} />
+            <StatusBadge status={visualStatus} />
             <span>{formatCategory(item.categoria)}</span>
           </div>
 

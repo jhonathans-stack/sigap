@@ -6,7 +6,7 @@ const upload = require("../middlewares/upload");
 const router = express.Router();
 const { requireRoles } = authMiddleware;
 
-router.get("/", itemController.listItens);
+router.get("/", authMiddleware.optional, itemController.listItens);
 router.get("/minhas-solicitacoes", authMiddleware, itemController.listUserRequests);
 router.get("/para-coleta", authMiddleware, requireRoles("admin", "super"), itemController.listItemsForCollection);
 router.get("/entregues", authMiddleware, requireRoles("admin", "super"), itemController.listDeliveredReports);

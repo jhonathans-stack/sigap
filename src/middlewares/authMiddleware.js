@@ -36,6 +36,29 @@ const requireRoles = (...allowedRoles) => {
   };
 };
 
+const optional = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return next();
+  }
+
+  const [scheme, token] = authHeader.split(" ");
+
+  if (scheme !== "Bearer" || !token) {
+    return next();
+  }
+
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    req.user = null;
+  }
+
+  return next();
+};
+
 authMiddleware.requireRoles = requireRoles;
+authMiddleware.optional = optional;
 
 module.exports = authMiddleware;

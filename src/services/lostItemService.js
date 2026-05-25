@@ -25,8 +25,8 @@ const validatePayload = (payload) => {
     throw new AppError("Data do sumico invalida.", 400);
   }
 
-  const today = new Date();
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayParts = getBrazilDateParts();
+  const todayKey = `${todayParts.year}-${todayParts.month}-${todayParts.day}`;
 
   if (dataPerda > todayKey) {
     throw new AppError("A data do sumico nao pode ser futura.", 400);
@@ -37,7 +37,7 @@ const validatePayload = (payload) => {
   }
 
   if (dataPerda === todayKey) {
-    const hour = today.getHours();
+    const hour = Number(todayParts.hour) % 24;
     const currentTurno = hour < 12 ? "manha" : hour < 18 ? "tarde" : "noite";
     const order = { manha: 1, tarde: 2, noite: 3 };
 
@@ -67,6 +67,19 @@ const normalizeForSearch = (value) => {
 const normalizeImageUrls = (urls = []) => {
   const list = Array.isArray(urls) ? urls : [urls];
   return Array.from(new Set(list.map((url) => String(url || "").trim()).filter(Boolean)));
+};
+
+const getBrazilDateParts = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false
+  }).formatToParts(new Date());
+
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
 };
 
 const findMatches = async (payload) => {

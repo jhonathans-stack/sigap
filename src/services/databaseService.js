@@ -58,7 +58,7 @@ const ensureCompatibleColumns = async () => {
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()");
   await runCompatibilityQuery("ALTER TABLE itens DROP CONSTRAINT IF EXISTS itens_status_check");
-  await pool.query("UPDATE itens SET status = 'aguardando_coleta' WHERE status = 'aguardando_retirada'");
+  await pool.query("UPDATE itens SET status = 'achado' WHERE status IN ('aguardando_retirada', 'aguardando_coleta')");
   await pool.query("UPDATE itens SET status = 'devolvido' WHERE status = 'entregue'");
   await pool.query("UPDATE itens SET status = 'achado' WHERE status NOT IN ('achado', 'perdido', 'aguardando_coleta', 'devolvido')");
   await pool.query("UPDATE itens SET imagens_urls = ARRAY[imagem_url] WHERE imagem_url IS NOT NULL AND (imagens_urls IS NULL OR array_length(imagens_urls, 1) IS NULL)");

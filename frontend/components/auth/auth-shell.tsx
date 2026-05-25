@@ -5,16 +5,16 @@ const featureItems = [
   {
     icon: FileText,
     title: "Cadastro de itens",
-    description: "Registre objetos encontrados com fotos e descricoes detalhadas"
+    description: "Registre objetos encontrados com fotos e descrições detalhadas"
   },
   {
     icon: CheckCircle,
-    title: "Controle de devolucao",
-    description: "Acompanhe solicitacoes e confirmacoes de entrega"
+    title: "Controle de devolução",
+    description: "Acompanhe solicitações e confirmações de entrega"
   },
   {
     icon: Search,
-    title: "Consulta rapida",
+    title: "Consulta rápida",
     description: "Busque e filtre itens por categoria, local e status"
   }
 ];
@@ -58,7 +58,7 @@ export function AuthShell({
       <section className="hidden w-1/2 flex-col justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-green-700 p-12 lg:flex">
         <div className="max-w-xl">
           <h1 className="mb-4 text-6xl font-bold text-white">SIGAP</h1>
-          <p className="mb-2 text-2xl text-blue-100">Sistema de Gestao de Achados e Perdidos</p>
+          <p className="mb-2 text-2xl text-blue-100">Sistema de Gestão de Achados e Perdidos</p>
           <p className="mb-12 text-lg text-blue-200">Gerencie itens encontrados de forma simples e organizada</p>
 
           <div className="space-y-4">
@@ -88,7 +88,7 @@ export function AuthShell({
 
           <div className="mt-8 text-center lg:hidden">
             <h3 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">SIGAP</h3>
-            <p className="text-gray-600 dark:text-gray-400">Sistema de Gestao de Achados e Perdidos</p>
+            <p className="text-gray-600 dark:text-gray-400">Sistema de Gestão de Achados e Perdidos</p>
           </div>
         </div>
       </section>

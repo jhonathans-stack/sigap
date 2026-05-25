@@ -66,7 +66,7 @@ export function ItemDetailsModal({
     setIsEditing(false);
     setConfirmDelete(false);
     setClaimChecked(false);
-    setCollectionCode("");
+    setCollectionCode(item.minha_coleta_codigo || "");
     setImageFiles([]);
   }, [item]);
 
@@ -77,7 +77,8 @@ export function ItemDetailsModal({
   }
 
   const isBaseUser = user?.role === "user";
-  const canClaim = isBaseUser && item.status === "achado";
+  const visualStatus = item.status_visual || item.status;
+  const canClaim = isBaseUser && ["achado", "perdido"].includes(item.status) && !item.minha_coleta_id;
   const canMarkInfo = item.status === "perdido" && item.cadastrado_por_id === user?.id;
 
   function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
@@ -189,7 +190,9 @@ export function ItemDetailsModal({
       const response = await itensApi.requestReturn(item.id);
       onUpdated(response.item);
       setCollectionCode(response.codigo_coleta || "");
-      toast.success("Código de coleta gerado.");
+      toast.success("Código de coleta gerado.", {
+        description: response.codigo_coleta ? `Apresente o código ${response.codigo_coleta} no local de coleta.` : undefined
+      });
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Não foi possível gerar o código de coleta."));
     } finally {
@@ -204,7 +207,7 @@ export function ItemDetailsModal({
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{item.nome_item}</h2>
-              <StatusBadge status={item.status} />
+              <StatusBadge status={visualStatus} />
             </div>
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-500 dark:text-gray-400">
               <span className="inline-flex items-center gap-1">
@@ -309,7 +312,7 @@ export function ItemDetailsModal({
                 <InfoBox label="Data" value={formatDate(item.data_achado)} />
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
                   <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Status</p>
-                  <div className="mt-2"><StatusBadge status={item.status} /></div>
+                  <div className="mt-2"><StatusBadge status={visualStatus} /></div>
                 </div>
               </div>
 
@@ -333,10 +336,9 @@ export function ItemDetailsModal({
 
               {!canManage ? (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                  {item.status === "achado" ? "Se este item for seu, marque a opção abaixo para gerar um código de coleta." : null}
-                  {item.status === "perdido" ? "Este item foi reportado como perdido por um usuário do sistema." : null}
-                  {item.status === "aguardando_coleta" ? "Este item já possui uma solicitação de coleta em andamento." : null}
-                  {item.status === "devolvido" ? "Este item já consta como devolvido no sistema." : null}
+                  {visualStatus === "achado" || visualStatus === "perdido" ? "Se este item for seu, marque a opção abaixo para gerar um código de coleta." : null}
+                  {visualStatus === "aguardando_coleta" ? "Você já gerou um código de coleta para este item. Ele também fica disponível em Minhas solicitações." : null}
+                  {visualStatus === "devolvido" ? "Este item já consta como devolvido no sistema." : null}
                 </div>
               ) : null}
 

@@ -143,12 +143,19 @@ export const itensApi = {
     return data;
   },
 
-  async listForCollection() {
-    const { data } = await api.get<Item[]>("/api/itens/para-coleta");
+  async listForCollection(filters: { busca?: string } = {}) {
+    const params = new URLSearchParams();
+
+    if (filters.busca?.trim()) {
+      params.set("busca", filters.busca.trim());
+    }
+
+    const query = params.toString();
+    const { data } = await api.get<Item[]>(query ? `/api/itens/para-coleta?${query}` : "/api/itens/para-coleta");
     return data;
   },
 
-  async confirmCollection(id: number, payload: { codigo: string; coletor_nome: string; coletor_documento: string }) {
+  async confirmCollection(id: number, payload: { codigo: string }) {
     const { data } = await api.post<ItemMutationResponse>(`/api/itens/${id}/confirmar-coleta`, payload);
     return data;
   },

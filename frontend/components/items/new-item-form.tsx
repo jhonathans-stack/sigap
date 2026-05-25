@@ -23,7 +23,13 @@ const locations = [
   "Laboratorios do Monte Castelo",
   "Cantina",
   "Secretaria academica",
-  "Auditorio principal"
+  "Auditorio principal",
+  "Outros"
+];
+const turnos = [
+  { value: "manha", label: "Manha" },
+  { value: "tarde", label: "Tarde" },
+  { value: "noite", label: "Noite" }
 ];
 
 const emptyForm = {
@@ -31,8 +37,50 @@ const emptyForm = {
   descricao: "",
   categoria: "",
   local_encontrado: "",
-  data_achado: ""
+  local_outro: "",
+  data_achado: "",
+  turno: ""
 };
+
+function maskDate(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) {
+    return digits;
+  }
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function parseBrazilianDate(value: string) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const [, day, month, year] = match;
+  const iso = `${year}-${month}-${day}`;
+  const parsed = new Date(`${iso}T00:00:00`);
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== Number(year) ||
+    parsed.getMonth() + 1 !== Number(month) ||
+    parsed.getDate() !== Number(day)
+  ) {
+    return null;
+  }
+
+  return iso;
+}
+
+function todayKey() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+}
 
 export function NewItemForm() {
   const router = useRouter();
@@ -104,10 +152,19 @@ export function NewItemForm() {
 
     if (!form.local_encontrado) {
       nextErrors.push("Local encontrado e obrigatorio.");
+    } else if (form.local_encontrado === "Outros" && form.local_outro.trim().length < 3) {
+      nextErrors.push("Informe o local encontrado.");
     }
 
-    if (!form.data_achado) {
-      nextErrors.push("Data do achado e obrigatoria.");
+    const isoDate = parseBrazilianDate(form.data_achado);
+    if (!isoDate) {
+      nextErrors.push("Data do achado deve estar no formato DD/MM/AAAA.");
+    } else if (isoDate > todayKey()) {
+      nextErrors.push("Data do achado nao pode ser futura.");
+    }
+
+    if (!form.turno) {
+      nextErrors.push("Turno e obrigatorio.");
     }
 
     if (!imageFiles.length) {
@@ -136,8 +193,9 @@ export function NewItemForm() {
     formData.append("nome_item", form.nome_item.trim());
     formData.append("descricao", form.descricao.trim());
     formData.append("categoria", form.categoria);
-    formData.append("local_encontrado", form.local_encontrado);
-    formData.append("data_achado", form.data_achado);
+    formData.append("local_encontrado", form.local_encontrado === "Outros" ? form.local_outro.trim() : form.local_encontrado);
+    formData.append("data_achado", parseBrazilianDate(form.data_achado) || "");
+    formData.append("turno", form.turno);
     formData.append("status", "achado");
 
     imageFiles.forEach((file) => formData.append("imagens", file));
@@ -273,19 +331,60 @@ export function NewItemForm() {
                 ))}
               </FigmaSelect>
 
+              {form.local_encontrado === "Outros" ? (
+                <FigmaTextarea
+                  name="local_outro"
+                  label="Descreva o local encontrado *"
+                  placeholder="Informe o local com detalhes suficientes para identificacao..."
+                  rows={3}
+                  value={form.local_outro}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, local_outro: event.target.value }));
+                    clearErrors();
+                  }}
+                  disabled={loading}
+                  invalid={errors.some((error) => error.includes("local encontrado"))}
+                  required
+                />
+              ) : null}
+
               <FigmaInput
-                type="date"
+                type="text"
                 name="data_achado"
                 label="Data do achado *"
+                placeholder="DD/MM/AAAA"
+                inputMode="numeric"
+                maxLength={10}
+                pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}"
                 value={form.data_achado}
                 onChange={(event) => {
-                  setForm((current) => ({ ...current, data_achado: event.target.value }));
+                  setForm((current) => ({ ...current, data_achado: maskDate(event.target.value) }));
                   clearErrors();
                 }}
                 disabled={loading}
                 invalid={errors.some((error) => error.includes("Data"))}
                 required
               />
+
+              <FigmaSelect
+                name="turno"
+                label="Turno *"
+                value={form.turno}
+                onChange={(event) => {
+                  setForm((current) => ({ ...current, turno: event.target.value }));
+                  clearErrors();
+                }}
+                disabled={loading}
+                invalid={errors.some((error) => error.includes("Turno"))}
+                required
+              >
+                <option value="">Selecione o turno</option>
+                {turnos.map((turno) => (
+                  <option key={turno.value} value={turno.value}>
+                    {turno.label}
+                  </option>
+                ))}
+              </FigmaSelect>
 
               <div className="flex gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">
                 <FigmaButton type="button" variant="secondary" onClick={() => router.push("/")} className="flex-1" disabled={loading}>

@@ -27,7 +27,7 @@ export function DeliveredPage() {
       const data = await itensApi.deliveredReports(filters);
       setReports(data);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Não foi possível carregar produtos entregues."));
+      toast.error(getApiErrorMessage(error, "Não foi possível carregar itens entregues."));
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export function DeliveredPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Produtos entregues</h1>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Itens entregues</h1>
           <p className="text-gray-600 dark:text-gray-400">
             Consulte relatórios de coleta por item, responsável, pessoa que retirou, documento, local e categoria.
           </p>
@@ -97,7 +97,7 @@ export function DeliveredPage() {
         ) : reports.length === 0 ? (
           <FigmaCard className="p-12 text-center">
             <FileText className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-            <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">Nenhum produto entregue encontrado</h3>
+            <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">Nenhum item entregue encontrado</h3>
             <p className="text-gray-600 dark:text-gray-400">Ajuste os filtros ou aguarde novas coletas.</p>
           </FigmaCard>
         ) : (

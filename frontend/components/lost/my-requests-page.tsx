@@ -88,10 +88,15 @@ export function MyRequestsPage() {
   const totals = useMemo(
     () => ({
       total: requests.length + claimedItems.length,
-      ativos: requests.filter((request) => request.status === "alerta_ativo").length + claimedItems.filter((item) => item.status === "achado" || item.status === "perdido").length,
+      ativos:
+        requests.filter((request) => request.status === "alerta_ativo").length +
+        claimedItems.filter((item) => {
+          const status = item.status_visual || item.status;
+          return status === "achado" || status === "perdido";
+        }).length,
       andamento:
         requests.filter((request) => request.status === "encontrado").length +
-        claimedItems.filter((item) => item.status === "aguardando_coleta").length
+        claimedItems.filter((item) => (item.status_visual || item.status) === "aguardando_coleta").length
     }),
     [claimedItems, requests]
   );
@@ -119,11 +124,7 @@ export function MyRequestsPage() {
     setSelectedItem(updatedItem);
   }
 
-  async function handleMarkFound(request: LostItemRequest) {
-    if (!window.confirm(`Tem certeza que deseja marcar "${request.nome_item}" como encontrado?`)) {
-      return;
-    }
-
+  async function confirmMarkFound(request: LostItemRequest) {
     try {
       const response = await lostItemsApi.markFound(request.id);
       setRequests((current) => current.map((item) => (item.id === request.id ? response.solicitacao : item)));
@@ -134,6 +135,20 @@ export function MyRequestsPage() {
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Não foi possível atualizar a solicitação."));
     }
+  }
+
+  function handleMarkFound(request: LostItemRequest) {
+    toast(`Marcar "${request.nome_item}" como encontrado?`, {
+      description: "Essa ação altera o status da sua solicitação.",
+      action: {
+        label: "Confirmar",
+        onClick: () => void confirmMarkFound(request)
+      },
+      cancel: {
+        label: "Cancelar",
+        onClick: () => undefined
+      }
+    });
   }
 
   return (
@@ -218,6 +233,8 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
 
 function ClaimedItemCard({ item, onDetails }: { item: Item; onDetails: (item: Item) => void }) {
   const imageUrl = getItemImageUrl(item.imagem_url);
+  const visualStatus = item.status_visual || item.status;
+  const wasCollectedByAnotherUser = item.status === "devolvido" && item.minha_coleta_status === "cancelado";
 
   return (
     <FigmaCard className="overflow-hidden">
@@ -234,13 +251,26 @@ function ClaimedItemCard({ item, onDetails }: { item: Item; onDetails: (item: It
         </div>
 
         <div className="mb-4 space-y-2">
-          <span className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${itemStatusColor(item.status)}`}>
-            {itemStatusLabel(item.status)}
+          <span className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${itemStatusColor(visualStatus)}`}>
+            {itemStatusLabel(visualStatus)}
           </span>
           <p className="text-sm text-gray-600 dark:text-gray-400">{item.categoria || "Sem categoria"}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Local: {item.local_encontrado || "Nao informado"}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Data: {formatDate(item.data_achado)}</p>
         </div>
+
+        {item.minha_coleta_codigo && item.minha_coleta_status === "aguardando_coleta" ? (
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200">
+            <p className="font-semibold">Código de coleta</p>
+            <p className="mt-1 text-2xl font-bold tracking-[0.25em]">{item.minha_coleta_codigo}</p>
+          </div>
+        ) : null}
+
+        {wasCollectedByAnotherUser ? (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+            Já foi realizada a devolução do item. Para mais informações, dirija-se ao setor responsável.
+          </div>
+        ) : null}
 
         {item.status !== "devolvido" ? (
           <FigmaButton type="button" variant="ghost" className="w-full" onClick={() => onDetails(item)}>

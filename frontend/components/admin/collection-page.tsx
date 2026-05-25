@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { CheckCircle2, KeyRound, Package, RefreshCw } from "lucide-react";
+import { CheckCircle2, Eye, KeyRound, Package, RefreshCw, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Header } from "@/components/header";
 import { StatusBadge } from "@/components/status-badge";
@@ -12,14 +12,10 @@ import { formatDate, getItemImageUrls } from "@/lib/utils";
 
 type CollectionForm = {
   codigo: string;
-  coletor_nome: string;
-  coletor_documento: string;
 };
 
 const emptyForm: CollectionForm = {
-  codigo: "",
-  coletor_nome: "",
-  coletor_documento: ""
+  codigo: ""
 };
 
 export function CollectionPage() {
@@ -27,30 +23,33 @@ export function CollectionPage() {
   const [forms, setForms] = useState<Record<number, CollectionForm>>({});
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({});
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
 
     try {
-      const data = await itensApi.listForCollection();
+      const data = await itensApi.listForCollection({ busca: search });
       setItems(data);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Não foi possível carregar itens para coleta."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search]);
 
   useEffect(() => {
     void fetchItems();
   }, [fetchItems]);
 
-  function updateForm(itemId: number, field: keyof CollectionForm, value: string) {
+  function updateForm(itemId: number, value: string) {
     setForms((current) => ({
       ...current,
       [itemId]: {
         ...(current[itemId] || emptyForm),
-        [field]: field === "codigo" ? value.replace(/\D/g, "").slice(0, 6) : value
+        codigo: value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6)
       }
     }));
   }
@@ -60,13 +59,8 @@ export function CollectionPage() {
 
     const form = forms[item.id] || emptyForm;
 
-    if (!/^\d{6}$/.test(form.codigo)) {
-      toast.error("Informe o código de coleta com 6 dígitos.");
-      return;
-    }
-
-    if (form.coletor_nome.trim().length < 3 || form.coletor_documento.trim().length < 3) {
-      toast.error("Informe nome e documento de quem está retirando o item.");
+    if (!/^[A-Z0-9]{6}$/.test(form.codigo)) {
+      toast.error("Informe o código de coleta com 6 caracteres.");
       return;
     }
 
@@ -74,9 +68,7 @@ export function CollectionPage() {
 
     try {
       await itensApi.confirmCollection(item.id, {
-        codigo: form.codigo,
-        coletor_nome: form.coletor_nome.trim(),
-        coletor_documento: form.coletor_documento.trim()
+        codigo: form.codigo
       });
       toast.success("Coleta confirmada e relatório salvo.");
       setItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
@@ -110,6 +102,21 @@ export function CollectionPage() {
           </FigmaButton>
         </div>
 
+        <FigmaCard className="mb-8 p-5">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <input
+              className="sigap-input pl-10"
+              value={search}
+              onChange={(event) => setSearch(event.target.value.toUpperCase())}
+              placeholder="Buscar por código, item, categoria, local, nome, email ou matrícula"
+            />
+          </label>
+          <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+            Para concluir uma entrega, informe apenas o código de coleta. Os dados do solicitante são carregados automaticamente pelo sistema.
+          </p>
+        </FigmaCard>
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
@@ -123,13 +130,24 @@ export function CollectionPage() {
         ) : (
           <div className="grid gap-6 lg:grid-cols-2">
             {items.map((item) => {
-              const imageUrl = getItemImageUrls(item.imagens_urls, item.imagem_url)[0];
+              const imageUrls = getItemImageUrls(item.imagens_urls, item.imagem_url);
+              const imageUrl = imageUrls[0];
               const form = forms[item.id] || emptyForm;
               const isBusy = busyId === item.id;
+              const expanded = Boolean(expandedItems[item.id]);
+              const description = item.descricao || "Descrição não informada.";
 
               return (
                 <FigmaCard key={item.id} className="overflow-hidden">
-                  {imageUrl ? <img src={imageUrl} alt={item.nome_item} className="h-56 w-full object-cover" /> : null}
+                  {imageUrl ? (
+                    <button type="button" className="relative block h-56 w-full bg-gray-100 dark:bg-gray-800" onClick={() => setLightboxUrl(imageUrl)}>
+                      <img src={imageUrl} alt={item.nome_item} className="h-full w-full object-cover" />
+                      <span className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white">
+                        <Eye className="h-4 w-4" />
+                        Expandir
+                      </span>
+                    </button>
+                  ) : null}
                   <div className="space-y-4 p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -138,7 +156,23 @@ export function CollectionPage() {
                           {item.local_encontrado || "Local não informado"} • {formatDate(item.data_achado)}
                         </p>
                       </div>
-                      <StatusBadge status={item.status} />
+                      <StatusBadge status={item.status_visual || item.status} />
+                    </div>
+
+                    <div className="grid gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-900">
+                      <p><strong>Usuário:</strong> {item.solicitante_nome || "Não informado"}</p>
+                      <p><strong>Email:</strong> {item.solicitante_email || "Não informado"}</p>
+                      <p><strong>Matrícula:</strong> {item.solicitante_matricula || "Não informada"}</p>
+                      <p><strong>CPF:</strong> {item.solicitante_cpf || "Não informado"}</p>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                      <p className={expanded ? "" : "line-clamp-2"}>{description}</p>
+                      {description.length > 120 ? (
+                        <button type="button" className="mt-2 text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400" onClick={() => setExpandedItems((current) => ({ ...current, [item.id]: !expanded }))}>
+                          {expanded ? "Exibir menos" : "Exibir mais"}
+                        </button>
+                      ) : null}
                     </div>
 
                     <form className="space-y-3" onSubmit={(event) => handleSubmit(event, item)}>
@@ -146,18 +180,8 @@ export function CollectionPage() {
                         <span className="sigap-label">Código de coleta</span>
                         <div className="relative">
                           <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                          <input className="sigap-input pl-10" value={form.codigo} onChange={(event) => updateForm(item.id, "codigo", event.target.value)} placeholder="000000" inputMode="numeric" disabled={isBusy} required />
+                          <input className="sigap-input pl-10" value={form.codigo} onChange={(event) => updateForm(item.id, event.target.value)} placeholder="A1B2C3" disabled={isBusy} required />
                         </div>
-                      </label>
-
-                      <label className="space-y-1">
-                        <span className="sigap-label">Nome de quem retirou</span>
-                        <input className="sigap-input" value={form.coletor_nome} onChange={(event) => updateForm(item.id, "coletor_nome", event.target.value)} disabled={isBusy} required />
-                      </label>
-
-                      <label className="space-y-1">
-                        <span className="sigap-label">Documento de quem retirou</span>
-                        <input className="sigap-input" value={form.coletor_documento} onChange={(event) => updateForm(item.id, "coletor_documento", event.target.value)} disabled={isBusy} required />
                       </label>
 
                       <FigmaButton type="submit" className="w-full" loading={isBusy}>
@@ -172,6 +196,15 @@ export function CollectionPage() {
           </div>
         )}
       </section>
+
+      {lightboxUrl ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <button type="button" className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20" onClick={() => setLightboxUrl(null)} aria-label="Fechar imagem">
+            <X className="h-6 w-6" />
+          </button>
+          <img src={lightboxUrl} alt="Imagem ampliada do item" className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain" />
+        </div>
+      ) : null}
     </main>
   );
 }

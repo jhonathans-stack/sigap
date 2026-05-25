@@ -18,7 +18,7 @@ const buildUploadedImageUrls = (req) => {
 };
 
 const listItens = asyncHandler(async (req, res) => {
-  const itens = await itemService.listItens(req.query);
+  const itens = await itemService.listItens(req.query, req.user);
   res.json(itens);
 });
 
@@ -73,7 +73,7 @@ const confirmReceipt = asyncHandler(async (req, res) => {
 });
 
 const listItemsForCollection = asyncHandler(async (req, res) => {
-  const itens = await itemService.listItemsForCollection();
+  const itens = await itemService.listItemsForCollection(req.query);
   res.json(itens);
 });
 

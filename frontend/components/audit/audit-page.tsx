@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, FileText, Package, RefreshCw, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Eye, FileText, Package, RefreshCw, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Header } from "@/components/header";
 import { useAuth } from "@/components/providers/auth-provider";
-import { FigmaButton, FigmaCard } from "@/components/ui/figma-primitives";
+import { FigmaButton, FigmaCard, FigmaModal } from "@/components/ui/figma-primitives";
 import { auditApi, getApiErrorMessage } from "@/lib/api";
 import type { AuditLog } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
@@ -20,12 +20,22 @@ function formatDetails(details?: Record<string, unknown>) {
     .join(" | ");
 }
 
-function formatDetailedDetails(details?: Record<string, unknown>) {
-  if (!details || !Object.keys(details).length) {
-    return "Sem detalhes";
+function humanizeAction(action: string) {
+  return action
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function formatPromotion(details?: Record<string, unknown>) {
+  if (!details) {
+    return "Promoção registrada.";
   }
 
-  return JSON.stringify(details, null, 2);
+  const operator = details.operador_nome || details.operador_email || "Operador não informado";
+  const target = details.promovido_nome || details.promovido_email || details.email || "Usuário promovido";
+  return `${String(operator)} promoveu ${String(target)} para superusuário.`;
 }
 
 function getActionColor(acao: string) {
@@ -64,6 +74,9 @@ export function AuditPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const logsPerPage = 10;
 
   const stats = useMemo(
     () => ({
@@ -73,6 +86,8 @@ export function AuditPage() {
     }),
     [logs]
   );
+  const totalPages = Math.ceil(logs.length / logsPerPage);
+  const visibleLogs = logs.slice(currentPage * logsPerPage, (currentPage + 1) * logsPerPage);
 
   const fetchLogs = useCallback(async (refresh = false) => {
     if (refresh) {
@@ -84,6 +99,7 @@ export function AuditPage() {
     try {
       const data = await auditApi.list();
       setLogs(data);
+      setCurrentPage(0);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Erro ao carregar logs de auditoria."));
     } finally {
@@ -172,7 +188,7 @@ export function AuditPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log) => (
+                  {visibleLogs.map((log) => (
                     <tr
                       key={log.id}
                       className="border-b border-gray-200 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
@@ -180,16 +196,23 @@ export function AuditPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{formatDateTime(log.criado_em)}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{log.usuario_nome || "Sistema"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{log.usuario_email || "Sem email"}</td>
-                      <td className={`px-4 py-3 text-sm font-medium ${getActionColor(log.acao)}`}>{log.acao}</td>
+                      <td className={`px-4 py-3 text-sm font-medium ${getActionColor(log.acao)}`}>{humanizeAction(log.acao)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                         {log.entidade}
                         {log.entidade_id ? ` #${log.entidade_id}` : ""}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        {user?.role === "super" ? (
-                          <pre className="max-w-md whitespace-pre-wrap rounded-lg bg-gray-100 p-3 text-xs leading-5 dark:bg-gray-900">
-                            {formatDetailedDetails(log.detalhes)}
-                          </pre>
+                        {log.entidade === "itens" ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50 dark:border-gray-700 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                            onClick={() => setSelectedLog(log)}
+                          >
+                            <Eye className="h-4 w-4" />
+                            Ver item
+                          </button>
+                        ) : log.acao.includes("promovido") ? (
+                          formatPromotion(log.detalhes)
                         ) : (
                           formatDetails(log.detalhes)
                         )}
@@ -205,6 +228,22 @@ export function AuditPage() {
                   <p className="text-gray-600 dark:text-gray-400">Nenhum log de auditoria encontrado</p>
                 </div>
               ) : null}
+
+              {totalPages > 1 ? (
+                <div className="flex items-center justify-center gap-4 border-t border-gray-200 px-4 py-4 dark:border-gray-700">
+                  <FigmaButton type="button" variant="secondary" onClick={() => setCurrentPage((page) => Math.max(0, page - 1))} disabled={currentPage === 0}>
+                    <ChevronLeft className="h-4 w-4" />
+                    Anterior
+                  </FigmaButton>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Página {currentPage + 1} de {totalPages}
+                  </span>
+                  <FigmaButton type="button" variant="secondary" onClick={() => setCurrentPage((page) => Math.min(totalPages - 1, page + 1))} disabled={currentPage === totalPages - 1}>
+                    Próxima
+                    <ChevronRight className="h-4 w-4" />
+                  </FigmaButton>
+                </div>
+              ) : null}
             </div>
           )}
         </FigmaCard>
@@ -216,7 +255,32 @@ export function AuditPage() {
           </p>
         </div>
       </section>
+
+      <FigmaModal isOpen={Boolean(selectedLog)} onClose={() => setSelectedLog(null)} title="Informações do item" size="lg">
+        {selectedLog ? (
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            <InfoLine label="Ação" value={humanizeAction(selectedLog.acao)} />
+            <InfoLine label="Data" value={formatDateTime(selectedLog.criado_em)} />
+            <InfoLine label="Operador" value={selectedLog.usuario_nome || selectedLog.usuario_email || "Sistema"} />
+            <InfoLine label="Item" value={String(selectedLog.detalhes?.nome_item || `Registro #${selectedLog.entidade_id || "-"}`)} />
+            {selectedLog.detalhes
+              ? Object.entries(selectedLog.detalhes).map(([key, value]) => (
+                  <InfoLine key={key} label={humanizeAction(key)} value={String(value)} />
+                ))
+              : null}
+          </div>
+        ) : null}
+      </FigmaModal>
     </main>
+  );
+}
+
+function InfoLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900">
+      <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="mt-1 break-words font-medium text-gray-900 dark:text-white">{value}</p>
+    </div>
   );
 }
 

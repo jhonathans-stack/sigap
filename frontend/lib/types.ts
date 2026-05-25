@@ -22,6 +22,7 @@ export type Item = {
   data_achado?: string | null;
   turno?: "manha" | "tarde" | "noite" | null;
   status: ItemStatus;
+  status_visual?: ItemStatus;
   imagem_url?: string | null;
   imagens_urls?: string[] | null;
   cadastrado_por_id?: number | null;
@@ -37,6 +38,17 @@ export type Item = {
   motivo_estorno?: string | null;
   criado_em?: string;
   atualizado_em?: string;
+  coletas_pendentes?: number;
+  minha_coleta_id?: number | null;
+  minha_coleta_codigo?: string | null;
+  minha_coleta_status?: "aguardando_coleta" | "devolvido" | "cancelado" | null;
+  coleta_id?: number | null;
+  coleta_criado_em?: string | null;
+  solicitante_id?: number | null;
+  solicitante_nome?: string | null;
+  solicitante_email?: string | null;
+  solicitante_cpf?: string | null;
+  solicitante_matricula?: string | null;
 };
 
 export type LoginResponse = {

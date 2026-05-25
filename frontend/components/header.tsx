@@ -59,7 +59,7 @@ export function Header() {
     { href: "/requests", label: "Minhas solicitações", show: isBaseUser },
     { href: "/items/new", label: "Cadastrar item", show: canManage },
     { href: "/admin/collection", label: "Itens para coleta", show: canManage },
-    { href: "/admin/delivered", label: "Produtos entregues", show: canManage },
+    { href: "/admin/delivered", label: "Itens entregues", show: canManage },
     { href: "/admin/users", label: "Usuários", show: canViewUsers(user) },
     { href: "/admin/audit", label: "Auditoria", show: canViewUsers(user) }
   ];

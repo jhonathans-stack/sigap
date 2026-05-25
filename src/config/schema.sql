@@ -62,6 +62,24 @@ CREATE TABLE IF NOT EXISTS solicitacoes_perdidos (
 CREATE INDEX IF NOT EXISTS idx_solicitacoes_perdidos_usuario ON solicitacoes_perdidos (usuario_id);
 CREATE INDEX IF NOT EXISTS idx_solicitacoes_perdidos_status ON solicitacoes_perdidos (status);
 
+CREATE TABLE IF NOT EXISTS coletas_itens (
+  id SERIAL PRIMARY KEY,
+  item_id INTEGER REFERENCES itens(id) ON DELETE CASCADE,
+  usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+  codigo_coleta VARCHAR(6) NOT NULL,
+  codigo_coleta_hash TEXT NOT NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'aguardando_coleta' CHECK (status IN ('aguardando_coleta', 'devolvido', 'cancelado')),
+  criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  usado_em TIMESTAMP WITH TIME ZONE,
+  cancelado_em TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_coletas_itens_item ON coletas_itens (item_id);
+CREATE INDEX IF NOT EXISTS idx_coletas_itens_usuario ON coletas_itens (usuario_id);
+CREATE INDEX IF NOT EXISTS idx_coletas_itens_status ON coletas_itens (status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_coletas_itens_codigo_unico ON coletas_itens (codigo_coleta);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_coletas_itens_codigo_ativo ON coletas_itens (codigo_coleta) WHERE status = 'aguardando_coleta';
+
 CREATE TABLE IF NOT EXISTS entregas_itens (
   id SERIAL PRIMARY KEY,
   item_id INTEGER REFERENCES itens(id) ON DELETE SET NULL,
