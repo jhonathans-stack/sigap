@@ -39,14 +39,14 @@ type PendingUserAction = { type: "delete" | "promote"; user: SigapUser } | null;
 
 function roleLabel(role: SigapUser["role"]) {
   if (role === "super") {
-    return "superusuario";
+    return "superusuário";
   }
 
   if (role === "admin") {
     return "administrador";
   }
 
-  return "usuario comum";
+  return "usuário base";
 }
 
 function AdminCreationPanel({ onCreated }: { onCreated: (user: SigapUser) => void }) {
@@ -345,9 +345,9 @@ export function UserManagementPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Usuarios do sistema</h1>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Usuários do sistema</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Gerencie permissoes e controle de acesso
+            Gerencie permissões e controle de acesso
           </p>
         </div>
 
@@ -355,7 +355,7 @@ export function UserManagementPage() {
           <Summary label="Total" value={totals.all} icon={UsersRound} />
           <Summary label="Super" value={totals.supers} icon={Crown} />
           <Summary label="Admins" value={totals.admins} icon={ShieldCheck} />
-          <Summary label="Comuns" value={totals.common} icon={UserRoundCog} />
+          <Summary label="Usuários base" value={totals.common} icon={UserRoundCog} />
         </div>
 
         {canDelete ? <AdminCreationPanel onCreated={handleAdminCreated} /> : null}
@@ -373,7 +373,7 @@ export function UserManagementPage() {
                 }`}
                 onClick={() => setActiveTab("admins")}
               >
-                Administradores e superusuarios
+                Administradores e superusuários
               </button>
               <button
                 type="button"
@@ -384,7 +384,7 @@ export function UserManagementPage() {
                 }`}
                 onClick={() => setActiveTab("common")}
               >
-                Usuarios comuns
+                Usuários base
               </button>
               </div>
             </div>
@@ -392,7 +392,7 @@ export function UserManagementPage() {
             <div className="grid gap-3 p-6">
             {isLoading ? (
               <div className="rounded-lg p-5 text-sm font-semibold text-gray-600 dark:text-gray-300">
-                Carregando usuarios...
+                Carregando usuários...
               </div>
             ) : visibleUsers.length ? (
               visibleUsers.map((user) => (
@@ -518,8 +518,8 @@ function UserRow({
           </div>
           <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{user.email}</p>
           <p className="mt-2 grid gap-1 text-xs text-gray-500 dark:text-gray-400 sm:grid-cols-2">
-            <span>CPF: {user.cpf ? formatCpf(user.cpf) : "Nao informado"}</span>
-            <span>Matricula: {user.matricula || "Nao informada"}</span>
+            <span>CPF: {user.cpf ? formatCpf(user.cpf) : "Não informado"}</span>
+            <span>Matrícula: {user.matricula || "Não informada"}</span>
           </p>
         </div>
 
@@ -527,14 +527,14 @@ function UserRow({
           {canPromoteThisUser ? (
             <button type="button" className="inline-flex min-w-48 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-70" onClick={() => onPromote(user)} disabled={Boolean(busyUserId)}>
               <ArrowUpCircle size={17} />
-              {isBusy ? "Promovendo..." : "Tornar superusuario"}
+              {isBusy ? "Promovendo..." : "Tornar superusuário"}
             </button>
           ) : null}
 
           {canRemoveThisUser ? (
             <button type="button" className="inline-flex min-w-40 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-70" onClick={() => onDelete(user)} disabled={Boolean(busyUserId)}>
               <Trash2 size={17} />
-              {isBusy ? "Excluindo..." : "Excluir usuario"}
+              {isBusy ? "Excluindo..." : "Excluir usuário"}
             </button>
           ) : (
             <span className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">

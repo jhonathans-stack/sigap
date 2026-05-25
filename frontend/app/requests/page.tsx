@@ -3,7 +3,7 @@ import { MyRequestsPage } from "@/components/lost/my-requests-page";
 
 export default function RequestsPage() {
   return (
-    <AuthGuard>
+    <AuthGuard allowedRoles={["user"]}>
       <MyRequestsPage />
     </AuthGuard>
   );

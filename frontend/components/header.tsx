@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { FigmaButton, FigmaModal } from "@/components/ui/figma-primitives";
@@ -11,28 +12,28 @@ import { getItemImageUrl } from "@/lib/utils";
 
 function roleLabel(role?: string) {
   if (role === "super") {
-    return "Superusuario";
+    return "Superusuário";
   }
 
   if (role === "admin") {
     return "Administrador";
   }
 
-  return "Usuario comum";
+  return "Usuário base";
 }
 
 function maskCpf(cpf?: string | null) {
   const digits = String(cpf || "").replace(/\D/g, "");
 
   if (digits.length !== 11) {
-    return "Nao informado";
+    return "Não informado";
   }
 
   return `${digits.substring(0, 2)}*.***.***-${digits.substring(digits.length - 2)}`;
 }
 
 function getInitials(name?: string | null) {
-  return String(name || "Usuario")
+  return String(name || "Usuário")
     .split(" ")
     .filter(Boolean)
     .map((part) => part[0])
@@ -44,18 +45,22 @@ function getInitials(name?: string | null) {
 export function Header() {
   const { logout, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const canManage = canManageItems(user);
+  const isBaseUser = user?.role === "user";
   const photoUrl = getItemImageUrl(user?.foto_url);
   const initials = getInitials(user?.nome);
 
   const navLinks = [
     { href: "/", label: "Home", show: true },
-    { href: "/lost/new", label: "Perdi um item", show: true },
-    { href: "/requests", label: "Minhas solicitacoes", show: true },
+    { href: "/lost/new", label: "Perdi um item", show: isBaseUser },
+    { href: "/requests", label: "Minhas solicitações", show: isBaseUser },
     { href: "/items/new", label: "Cadastrar item", show: canManage },
-    { href: "/admin/users", label: "Usuarios", show: canViewUsers(user) },
+    { href: "/admin/collection", label: "Itens para coleta", show: canManage },
+    { href: "/admin/delivered", label: "Produtos entregues", show: canManage },
+    { href: "/admin/users", label: "Usuários", show: canViewUsers(user) },
     { href: "/admin/audit", label: "Auditoria", show: canViewUsers(user) }
   ];
 
@@ -80,7 +85,11 @@ export function Header() {
                     <Link
                       key={link.href}
                       href={link.href}
-                      className="text-sm font-medium text-gray-700 transition-colors hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                      className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        pathname === link.href
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200"
+                          : "text-gray-700 hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400"
+                      }`}
                     >
                       {link.label}
                     </Link>
@@ -137,7 +146,11 @@ export function Header() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block rounded-lg px-3 py-2 text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                    className={`block rounded-lg px-3 py-2 transition-colors ${
+                      pathname === link.href
+                        ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200"
+                        : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                    }`}
                   >
                     {link.label}
                   </Link>
@@ -148,7 +161,7 @@ export function Header() {
         ) : null}
       </nav>
 
-      <FigmaModal isOpen={profileModalOpen} onClose={() => setProfileModalOpen(false)} title="Perfil do Usuario" size="sm">
+      <FigmaModal isOpen={profileModalOpen} onClose={() => setProfileModalOpen(false)} title="Perfil do usuário" size="sm">
         {user ? (
           <div className="space-y-4">
             <div className="flex items-center gap-4 border-b border-gray-200 pb-4 dark:border-gray-700">
@@ -163,7 +176,7 @@ export function Header() {
 
             <div className="space-y-3">
               <ProfileLine label="Email" value={user.email} />
-              <ProfileLine label="Matricula" value={user.matricula || "Nao informada"} />
+              <ProfileLine label="Matrícula" value={user.matricula || "Não informada"} />
               <ProfileLine label="CPF" value={maskCpf(user.cpf)} />
               <ProfileLine label="Tipo de acesso" value={roleLabel(user.role)} />
             </div>

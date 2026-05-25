@@ -11,7 +11,7 @@ import { getApiErrorMessage, itensApi } from "@/lib/api";
 import type { Item, ItemStatus } from "@/lib/types";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canManageItems } from "@/lib/storage";
-import { formatDate, getItemImageUrl } from "@/lib/utils";
+import { formatDate, getItemImageUrls } from "@/lib/utils";
 
 const categories = [
   { value: "documentos", label: "Documentos" },
@@ -33,8 +33,9 @@ const locations = [
 
 const statusOptions = [
   { value: "achado", label: "Achado" },
-  { value: "aguardando_retirada", label: "Aguardando retirada" },
-  { value: "entregue", label: "Entregue" }
+  { value: "perdido", label: "Perdido" },
+  { value: "aguardando_coleta", label: "Aguardando coleta" },
+  { value: "devolvido", label: "Devolvido" }
 ];
 
 const itemsPerPage = 6;
@@ -79,7 +80,9 @@ export function HomePage() {
     () => ({
       total: items.length,
       achados: items.filter((item) => item.status === "achado").length,
-      entregues: items.filter((item) => item.status === "entregue").length
+      perdidos: items.filter((item) => item.status === "perdido").length,
+      aguardando: items.filter((item) => item.status === "aguardando_coleta").length,
+      devolvidos: items.filter((item) => item.status === "devolvido").length
     }),
     [items]
   );
@@ -146,13 +149,13 @@ export function HomePage() {
           <p className="text-gray-600 dark:text-gray-400">
             {canManage
               ? "Consulte, filtre e acompanhe os registros do sistema de achados e perdidos"
-              : "Consulte os itens encontrados, veja detalhes, local, data do achado e situacao de devolucao"}
+              : "Consulte os itens encontrados, veja detalhes, local, data e situação de devolução"}
           </p>
 
           {!canManage ? (
             <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
               <p className="text-sm text-blue-800 dark:text-blue-300">
-                <strong>Modo consulta:</strong> seu perfil pode visualizar os itens, mas nao pode cadastrar, editar ou excluir registros.
+                <strong>Modo consulta:</strong> seu perfil pode visualizar os itens, mas não pode cadastrar, editar ou excluir registros.
               </p>
             </div>
           ) : null}
@@ -161,7 +164,9 @@ export function HomePage() {
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
           <StatCard label="Total" value={stats.total} icon={Package} color="text-blue-500" />
           <StatCard label="Achados" value={stats.achados} icon={Clock} color="text-green-500" />
-          <StatCard label="Entregues" value={stats.entregues} icon={CheckCircle} color="text-gray-500" />
+          <StatCard label="Perdidos" value={stats.perdidos} icon={AlertCircle} color="text-red-500" />
+          <StatCard label="Aguardando coleta" value={stats.aguardando} icon={Package} color="text-amber-500" />
+          <StatCard label="Devolvidos" value={stats.devolvidos} icon={CheckCircle} color="text-gray-500" />
         </div>
 
         <FigmaCard className="mb-8 p-6">
@@ -273,7 +278,7 @@ export function HomePage() {
                 </FigmaButton>
 
                 <span className="text-gray-700 dark:text-gray-300">
-                  Pagina {currentPage + 1} de {totalPages}
+                  Página {currentPage + 1} de {totalPages}
                 </span>
 
                 <FigmaButton
@@ -317,8 +322,9 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
 }
 
 function ItemGridCard({ item, onDetails }: { item: Item; onDetails: (item: Item) => void }) {
-  const imageUrl = getItemImageUrl(item.imagem_url);
-  const isDelivered = item.status === "entregue";
+  const imageUrls = getItemImageUrls(item.imagens_urls, item.imagem_url);
+  const imageUrl = imageUrls[0];
+  const isDelivered = item.status === "devolvido";
 
   return (
     <FigmaCard className={`overflow-hidden ${isDelivered ? "opacity-60" : ""}`} onClick={() => onDetails(item)}>

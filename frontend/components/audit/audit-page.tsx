@@ -20,6 +20,14 @@ function formatDetails(details?: Record<string, unknown>) {
     .join(" | ");
 }
 
+function formatDetailedDetails(details?: Record<string, unknown>) {
+  if (!details || !Object.keys(details).length) {
+    return "Sem detalhes";
+  }
+
+  return JSON.stringify(details, null, 2);
+}
+
 function getActionColor(acao: string) {
   const value = acao.toLowerCase();
 
@@ -119,9 +127,9 @@ export function AuditPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Logs imutaveis do sistema</h1>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Logs imutáveis do sistema</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Consulte alteracoes de itens, usuarios e alertas. Os registros sao apenas leitura.
+            Consulte alterações de itens, usuários e alertas. Os registros são apenas leitura.
           </p>
         </div>
 
@@ -177,7 +185,15 @@ export function AuditPage() {
                         {log.entidade}
                         {log.entidade_id ? ` #${log.entidade_id}` : ""}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{formatDetails(log.detalhes)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                        {user?.role === "super" ? (
+                          <pre className="max-w-md whitespace-pre-wrap rounded-lg bg-gray-100 p-3 text-xs leading-5 dark:bg-gray-900">
+                            {formatDetailedDetails(log.detalhes)}
+                          </pre>
+                        ) : (
+                          formatDetails(log.detalhes)
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

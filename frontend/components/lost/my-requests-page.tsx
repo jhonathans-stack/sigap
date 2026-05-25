@@ -36,24 +36,32 @@ function requestStatusColor(status: LostItemRequest["status"]) {
 }
 
 function itemStatusLabel(status: Item["status"]) {
-  if (status === "aguardando_retirada") {
-    return "Aguardando retirada";
+  if (status === "perdido") {
+    return "Perdido";
   }
 
-  if (status === "entregue") {
-    return "Entregue";
+  if (status === "aguardando_coleta") {
+    return "Aguardando coleta";
+  }
+
+  if (status === "devolvido") {
+    return "Devolvido";
   }
 
   return "Achado";
 }
 
 function itemStatusColor(status: Item["status"]) {
-  if (status === "aguardando_retirada") {
+  if (status === "aguardando_coleta") {
     return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
   }
 
-  if (status === "entregue") {
+  if (status === "devolvido") {
     return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400";
+  }
+
+  if (status === "perdido") {
+    return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
   }
 
   return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
@@ -80,10 +88,10 @@ export function MyRequestsPage() {
   const totals = useMemo(
     () => ({
       total: requests.length + claimedItems.length,
-      ativos: requests.filter((request) => request.status === "alerta_ativo").length + claimedItems.filter((item) => item.status === "achado").length,
+      ativos: requests.filter((request) => request.status === "alerta_ativo").length + claimedItems.filter((item) => item.status === "achado" || item.status === "perdido").length,
       andamento:
         requests.filter((request) => request.status === "encontrado").length +
-        claimedItems.filter((item) => item.status === "aguardando_retirada").length
+        claimedItems.filter((item) => item.status === "aguardando_coleta").length
     }),
     [claimedItems, requests]
   );
@@ -109,6 +117,23 @@ export function MyRequestsPage() {
   function handleUpdated(updatedItem: Item) {
     setClaimedItems((currentItems) => currentItems.map((item) => (item.id === updatedItem.id ? updatedItem : item)));
     setSelectedItem(updatedItem);
+  }
+
+  async function handleMarkFound(request: LostItemRequest) {
+    if (!window.confirm(`Tem certeza que deseja marcar "${request.nome_item}" como encontrado?`)) {
+      return;
+    }
+
+    try {
+      const response = await lostItemsApi.markFound(request.id);
+      setRequests((current) => current.map((item) => (item.id === request.id ? response.solicitacao : item)));
+      setClaimedItems((current) =>
+        current.map((item) => (item.id === request.item_id ? { ...item, status: "devolvido" } : item))
+      );
+      toast.success("Solicitação atualizada com sucesso.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Não foi possível atualizar a solicitação."));
+    }
   }
 
   return (
@@ -160,7 +185,7 @@ export function MyRequestsPage() {
             ))}
 
             {requests.map((request) => (
-              <LostRequestCard key={`alerta-${request.id}`} request={request} />
+              <LostRequestCard key={`alerta-${request.id}`} request={request} onMarkFound={handleMarkFound} />
             ))}
           </div>
         )}
@@ -217,7 +242,7 @@ function ClaimedItemCard({ item, onDetails }: { item: Item; onDetails: (item: It
           <p className="text-sm text-gray-600 dark:text-gray-400">Data: {formatDate(item.data_achado)}</p>
         </div>
 
-        {item.status !== "entregue" ? (
+        {item.status !== "devolvido" ? (
           <FigmaButton type="button" variant="ghost" className="w-full" onClick={() => onDetails(item)}>
             Ver detalhes
           </FigmaButton>
@@ -227,7 +252,7 @@ function ClaimedItemCard({ item, onDetails }: { item: Item; onDetails: (item: It
   );
 }
 
-function LostRequestCard({ request }: { request: LostItemRequest }) {
+function LostRequestCard({ request, onMarkFound }: { request: LostItemRequest; onMarkFound: (request: LostItemRequest) => void }) {
   const imageUrl = getItemImageUrl(request.imagem_url);
 
   return (
@@ -261,6 +286,13 @@ function LostRequestCard({ request }: { request: LostItemRequest }) {
               Ver vitrine
             </FigmaButton>
           </Link>
+        ) : null}
+
+        {request.status === "alerta_ativo" ? (
+          <FigmaButton type="button" variant="secondary" className="mt-3 w-full" onClick={() => onMarkFound(request)}>
+            <CheckCircle className="h-4 w-4" />
+            Já encontrei esse item
+          </FigmaButton>
         ) : null}
       </div>
     </FigmaCard>

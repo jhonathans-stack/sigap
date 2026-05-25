@@ -18,7 +18,8 @@ const locations = [
   "Laboratorios do Monte Castelo",
   "Cantina",
   "Secretaria academica",
-  "Auditorio principal"
+  "Auditorio principal",
+  "Outros"
 ];
 const turnos = [
   { value: "manha", label: "Manha" },
@@ -32,8 +33,33 @@ const emptyForm = {
   data_perda: "",
   turno: "",
   local_provavel: "",
+  local_outro: "",
   caracteristicas: ""
 };
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function currentTurno() {
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    return "manha";
+  }
+  if (hour < 18) {
+    return "tarde";
+  }
+  return "noite";
+}
+
+function isTurnoAllowedForDate(date: string, turno: string) {
+  if (!date || date !== todayKey()) {
+    return true;
+  }
+
+  const order = { manha: 1, tarde: 2, noite: 3 } as const;
+  return order[turno as keyof typeof order] <= order[currentTurno() as keyof typeof order];
+}
 
 export function LostItemForm() {
   const router = useRouter();
@@ -100,16 +126,22 @@ export function LostItemForm() {
       nextErrors.push("Categoria e obrigatoria.");
     }
 
-    if (!form.data_perda) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.data_perda)) {
       nextErrors.push("Data do sumico e obrigatoria.");
+    } else if (form.data_perda > todayKey()) {
+      nextErrors.push("A data do sumico nao pode ser futura.");
     }
 
     if (!form.turno) {
       nextErrors.push("Turno e obrigatorio.");
+    } else if (!isTurnoAllowedForDate(form.data_perda, form.turno)) {
+      nextErrors.push("O turno nao pode ser posterior ao turno atual.");
     }
 
     if (!form.local_provavel) {
       nextErrors.push("Local provavel e obrigatorio.");
+    } else if (form.local_provavel === "Outros" && form.local_outro.trim().length < 3) {
+      nextErrors.push("Informe o local provável.");
     }
 
     if (form.caracteristicas.trim().length < 5) {
@@ -125,7 +157,7 @@ export function LostItemForm() {
     data.append("categoria", form.categoria);
     data.append("data_perda", form.data_perda);
     data.append("turno", form.turno);
-    data.append("local_provavel", form.local_provavel);
+    data.append("local_provavel", form.local_provavel === "Outros" ? form.local_outro.trim() : form.local_provavel);
     data.append("caracteristicas", form.caracteristicas.trim());
 
     if (imageFile) {
@@ -144,7 +176,7 @@ export function LostItemForm() {
       const matches = await lostItemsApi.matches({
         nome_item: form.nome_item.trim(),
         categoria: form.categoria,
-        local_provavel: form.local_provavel,
+        local_provavel: form.local_provavel === "Outros" ? form.local_outro.trim() : form.local_provavel,
         caracteristicas: form.caracteristicas.trim()
       });
 
@@ -276,9 +308,11 @@ export function LostItemForm() {
                   label="Data do sumico *"
                   value={form.data_perda}
                   onChange={(event) => {
-                    setForm((current) => ({ ...current, data_perda: event.target.value }));
+                    const value = event.target.value.slice(0, 10);
+                    setForm((current) => ({ ...current, data_perda: value, turno: isTurnoAllowedForDate(value, current.turno) ? current.turno : "" }));
                     clearErrors();
                   }}
+                  max={todayKey()}
                   disabled={loading || checkingMatches}
                   invalid={errors.some((error) => error.includes("Data"))}
                   required
@@ -296,7 +330,9 @@ export function LostItemForm() {
                   required
                 >
                   <option value="">Selecione o turno</option>
-                  {turnos.map((turno) => (
+                  {turnos
+                    .filter((turno) => isTurnoAllowedForDate(form.data_perda, turno.value))
+                    .map((turno) => (
                     <option key={turno.value} value={turno.value}>
                       {turno.label}
                     </option>
@@ -307,7 +343,7 @@ export function LostItemForm() {
                   label="Local provavel *"
                   value={form.local_provavel}
                   onChange={(event) => {
-                    setForm((current) => ({ ...current, local_provavel: event.target.value }));
+                    setForm((current) => ({ ...current, local_provavel: event.target.value, local_outro: event.target.value === "Outros" ? current.local_outro : "" }));
                     clearErrors();
                   }}
                   disabled={loading || checkingMatches}
@@ -321,6 +357,22 @@ export function LostItemForm() {
                     </option>
                   ))}
                 </FigmaSelect>
+
+                {form.local_provavel === "Outros" ? (
+                  <FigmaTextarea
+                    label="Descreva o local provável *"
+                    placeholder="Informe o local com o máximo de detalhes possível..."
+                    rows={3}
+                    value={form.local_outro}
+                    onChange={(event) => {
+                      setForm((current) => ({ ...current, local_outro: event.target.value }));
+                      clearErrors();
+                    }}
+                    disabled={loading || checkingMatches}
+                    invalid={errors.some((error) => error.includes("local provável"))}
+                    required
+                  />
+                ) : null}
 
                 <FigmaTextarea
                   label="Caracteristicas marcantes *"

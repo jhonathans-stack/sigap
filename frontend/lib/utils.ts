@@ -20,6 +20,14 @@ export function getItemImageUrl(imageUrl?: string | null) {
   return imageUrl;
 }
 
+export function getItemImageUrls(imageUrls?: Array<string | null> | null, fallback?: string | null) {
+  const urls = [...(imageUrls || []), fallback]
+    .map((url) => getItemImageUrl(url))
+    .filter(Boolean) as string[];
+
+  return Array.from(new Set(urls));
+}
+
 export function formatDate(date?: string | null) {
   if (!date) {
     return "Nao informado";

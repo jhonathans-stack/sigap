@@ -9,7 +9,7 @@ import { formatDate, getItemImageUrl } from "@/lib/utils";
 export function ItemCard({ item, onDetails }: { item: Item; onDetails: (item: Item) => void }) {
   const imageUrl = getItemImageUrl(item.imagem_url);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const isDelivered = item.status === "entregue";
+  const isDelivered = item.status === "devolvido";
 
   return (
     <>

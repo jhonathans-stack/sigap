@@ -47,15 +47,25 @@ const ensureCompatibleColumns = async () => {
   await runCompatibilityQuery("ALTER TABLE usuarios DROP COLUMN IF EXISTS campus");
 
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS data_achado DATE");
+  await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS turno VARCHAR(20)");
+  await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS imagens_urls TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS solicitado_por_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS solicitado_em TIMESTAMP WITH TIME ZONE");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS confirmado_por_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS confirmado_em TIMESTAMP WITH TIME ZONE");
+  await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS codigo_coleta_hash TEXT");
+  await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS codigo_coleta_criado_em TIMESTAMP WITH TIME ZONE");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()");
   await pool.query("ALTER TABLE itens ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()");
   await runCompatibilityQuery("ALTER TABLE itens DROP CONSTRAINT IF EXISTS itens_status_check");
-  await pool.query("ALTER TABLE itens ADD CONSTRAINT itens_status_check CHECK (status IN ('achado', 'aguardando_retirada', 'entregue'))");
+  await pool.query("UPDATE itens SET status = 'aguardando_coleta' WHERE status = 'aguardando_retirada'");
+  await pool.query("UPDATE itens SET status = 'devolvido' WHERE status = 'entregue'");
+  await pool.query("UPDATE itens SET status = 'achado' WHERE status NOT IN ('achado', 'perdido', 'aguardando_coleta', 'devolvido')");
+  await pool.query("UPDATE itens SET imagens_urls = ARRAY[imagem_url] WHERE imagem_url IS NOT NULL AND (imagens_urls IS NULL OR array_length(imagens_urls, 1) IS NULL)");
+  await pool.query("ALTER TABLE itens ADD CONSTRAINT itens_status_check CHECK (status IN ('achado', 'perdido', 'aguardando_coleta', 'devolvido'))");
   await pool.query("ALTER TABLE itens ALTER COLUMN status SET DEFAULT 'achado'");
+
+  await pool.query("ALTER TABLE solicitacoes_perdidos ADD COLUMN IF NOT EXISTS item_id INTEGER REFERENCES itens(id) ON DELETE SET NULL");
 };
 
 const runRetentionRoutine = async () => {
@@ -65,7 +75,7 @@ const runRetentionRoutine = async () => {
          quem_retirou_documento = NULL,
          motivo_devolucao = 'Registro antigo anonimizado automaticamente.',
          atualizado_em = NOW()
-     WHERE status = 'entregue'
+     WHERE status = 'devolvido'
        AND data_entrega IS NOT NULL
        AND data_entrega < NOW() - INTERVAL '365 days'
        AND (quem_retirou_nome IS DISTINCT FROM 'Anonimizado por politica LGPD'

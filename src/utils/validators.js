@@ -7,7 +7,7 @@ const isAllowedRole = (role) => {
 };
 
 const isAllowedStatus = (status) => {
-  return ["achado", "aguardando_retirada", "entregue"].includes(String(status || "").trim());
+  return ["achado", "perdido", "aguardando_coleta", "devolvido"].includes(String(status || "").trim());
 };
 
 const isPositiveInteger = (value) => {

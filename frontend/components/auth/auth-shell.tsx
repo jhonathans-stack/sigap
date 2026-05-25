@@ -1,4 +1,5 @@
 import { CheckCircle, FileText, Search } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const featureItems = [
   {
@@ -32,6 +33,9 @@ export function AuthShell({
   if (!isLogin) {
     return (
       <main className="min-h-screen bg-gray-50 px-4 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
+        <div className="fixed right-5 top-5 z-20">
+          <ThemeToggle />
+        </div>
         <div className="mx-auto max-w-2xl">
           <div className="mb-8 text-center">
             <h1 className="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Criar conta no SIGAP</h1>
@@ -48,6 +52,9 @@ export function AuthShell({
 
   return (
     <main className="flex min-h-screen">
+      <div className="fixed right-5 top-5 z-20">
+        <ThemeToggle />
+      </div>
       <section className="hidden w-1/2 flex-col justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-green-700 p-12 lg:flex">
         <div className="max-w-xl">
           <h1 className="mb-4 text-6xl font-bold text-white">SIGAP</h1>

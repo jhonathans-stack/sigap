@@ -25,8 +25,25 @@ const validatePayload = (payload) => {
     throw new AppError("Data do sumico invalida.", 400);
   }
 
+  const today = new Date();
+  const todayKey = today.toISOString().slice(0, 10);
+
+  if (dataPerda > todayKey) {
+    throw new AppError("A data do sumico nao pode ser futura.", 400);
+  }
+
   if (!["manha", "tarde", "noite"].includes(turno)) {
     throw new AppError("Turno deve ser manha, tarde ou noite.", 400);
+  }
+
+  if (dataPerda === todayKey) {
+    const hour = today.getHours();
+    const currentTurno = hour < 12 ? "manha" : hour < 18 ? "tarde" : "noite";
+    const order = { manha: 1, tarde: 2, noite: 3 };
+
+    if (order[turno] > order[currentTurno]) {
+      throw new AppError("O turno nao pode ser posterior ao turno atual.", 400);
+    }
   }
 
   return {
@@ -47,6 +64,11 @@ const normalizeForSearch = (value) => {
     .trim();
 };
 
+const normalizeImageUrls = (urls = []) => {
+  const list = Array.isArray(urls) ? urls : [urls];
+  return Array.from(new Set(list.map((url) => String(url || "").trim()).filter(Boolean)));
+};
+
 const findMatches = async (payload) => {
   const nome = normalizeForSearch(payload.nome_item);
   const categoria = normalizeForSearch(payload.categoria);
@@ -54,7 +76,7 @@ const findMatches = async (payload) => {
   const caracteristicas = normalizeForSearch(payload.caracteristicas);
 
   const terms = Array.from(new Set(
-    `${nome} ${caracteristicas}`
+    `${nome} ${caracteristicas} ${categoria} ${local}`
       .split(/\s+/)
       .map((term) => term.trim())
       .filter((term) => term.length >= 4)
@@ -63,7 +85,7 @@ const findMatches = async (payload) => {
   const result = await pool.query(
     `SELECT *
      FROM itens
-     WHERE status IN ('achado', 'aguardando_retirada')
+     WHERE status = 'achado'
      ORDER BY criado_em DESC, id DESC
      LIMIT 80`
   );
@@ -74,22 +96,22 @@ const findMatches = async (payload) => {
       let score = 0;
 
       if (categoria && normalizeForSearch(item.categoria) === categoria) {
-        score += 4;
+        score += 3;
       }
 
       if (local && normalizeForSearch(item.local_encontrado).includes(local)) {
-        score += 2;
+        score += 1;
       }
 
       terms.forEach((term) => {
         if (itemText.includes(term)) {
-          score += 1;
+          score += 2;
         }
       });
 
       return { item, score };
     })
-    .filter(({ score }) => score >= 2)
+    .filter(({ score }) => score >= 3)
     .sort((a, b) => b.score - a.score)
     .slice(0, 8)
     .map(({ item }) => item);
@@ -97,7 +119,7 @@ const findMatches = async (payload) => {
 
 const scoreRequestAgainstItem = (request, item) => {
   const requestTerms = Array.from(new Set(
-    `${request.nome_item} ${request.caracteristicas}`
+    `${request.nome_item} ${request.caracteristicas} ${request.categoria} ${request.local_provavel}`
       .split(/\s+/)
       .map((term) => normalizeForSearch(term))
       .filter((term) => term.length >= 4)
@@ -107,16 +129,16 @@ const scoreRequestAgainstItem = (request, item) => {
   let score = 0;
 
   if (normalizeForSearch(request.categoria) === normalizeForSearch(item.categoria)) {
-    score += 4;
+    score += 3;
   }
 
   if (normalizeForSearch(item.local_encontrado).includes(normalizeForSearch(request.local_provavel))) {
-    score += 2;
+    score += 1;
   }
 
   requestTerms.forEach((term) => {
     if (itemText.includes(term)) {
-      score += 1;
+      score += 2;
     }
   });
 
@@ -134,7 +156,7 @@ const matchActiveRequestsForItem = async (item, user) => {
 
   const matches = result.rows
     .map((request) => ({ request, score: scoreRequestAgainstItem(request, item) }))
-    .filter(({ score }) => score >= 2)
+    .filter(({ score }) => score >= 3)
     .sort((a, b) => b.score - a.score);
 
   for (const { request, score } of matches) {
@@ -165,41 +187,85 @@ const matchActiveRequestsForItem = async (item, user) => {
 
 const createLostItem = async (payload, uploadedImageUrl, user) => {
   const data = validatePayload(payload);
+  const imageUrls = normalizeImageUrls(uploadedImageUrl);
+  const primaryImageUrl = imageUrls[0] || null;
+  const client = await pool.connect();
 
-  const result = await pool.query(
-    `INSERT INTO solicitacoes_perdidos (
-       usuario_id,
-       nome_item,
-       categoria,
-       data_perda,
-       turno,
-       local_provavel,
-       caracteristicas,
-       imagem_url
-     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING *`,
-    [
-      user.id,
-      data.nomeItem,
-      data.categoria,
-      data.dataPerda,
-      data.turno,
-      data.localProvavel,
-      data.caracteristicas,
-      uploadedImageUrl || null
-    ]
-  );
+  try {
+    await client.query("BEGIN");
 
-  await auditService.logAction({
-    usuarioId: user.id,
-    acao: "solicitacao_perdido_criada",
-    entidade: "solicitacoes_perdidos",
-    entidadeId: result.rows[0].id,
-    detalhes: { nome_item: data.nomeItem, categoria: data.categoria }
-  });
+    const itemResult = await client.query(
+      `INSERT INTO itens (
+         nome_item,
+         descricao,
+         categoria,
+         local_encontrado,
+         data_achado,
+         turno,
+         status,
+         imagem_url,
+         imagens_urls,
+         cadastrado_por_id
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, 'perdido', $7, $8, $9)
+       RETURNING *`,
+      [
+        data.nomeItem,
+        data.caracteristicas,
+        data.categoria,
+        data.localProvavel,
+        data.dataPerda,
+        data.turno,
+        primaryImageUrl,
+        imageUrls,
+        user.id
+      ]
+    );
 
-  return result.rows[0];
+    const result = await client.query(
+      `INSERT INTO solicitacoes_perdidos (
+         usuario_id,
+         item_id,
+         nome_item,
+         categoria,
+         data_perda,
+         turno,
+         local_provavel,
+         caracteristicas,
+         imagem_url
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
+      [
+        user.id,
+        itemResult.rows[0].id,
+        data.nomeItem,
+        data.categoria,
+        data.dataPerda,
+        data.turno,
+        data.localProvavel,
+        data.caracteristicas,
+        primaryImageUrl
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    await auditService.logAction({
+      usuarioId: user.id,
+      acao: "solicitacao_perdido_criada",
+      entidade: "solicitacoes_perdidos",
+      entidadeId: result.rows[0].id,
+      detalhes: { nome_item: data.nomeItem, categoria: data.categoria, item_id: itemResult.rows[0].id }
+    });
+
+    return result.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 const listMine = async (user) => {
@@ -225,10 +291,78 @@ const listAll = async () => {
   return result.rows;
 };
 
+const markAsFoundByOwner = async (id, user) => {
+  if (!/^\d+$/.test(String(id)) || Number(id) <= 0) {
+    throw new AppError("ID da solicitacao invalido.", 400);
+  }
+
+  const current = await pool.query(
+    `SELECT *
+     FROM solicitacoes_perdidos
+     WHERE id = $1 AND usuario_id = $2`,
+    [Number(id), user.id]
+  );
+
+  if (!current.rowCount) {
+    throw new AppError("Solicitacao nao encontrada para este usuario.", 404);
+  }
+
+  const request = current.rows[0];
+  if (request.status !== "alerta_ativo") {
+    throw new AppError("Esta solicitacao nao esta ativa.", 400);
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const requestResult = await client.query(
+      `UPDATE solicitacoes_perdidos
+       SET status = 'encontrado',
+           atualizado_em = NOW()
+       WHERE id = $1 AND usuario_id = $2
+       RETURNING *`,
+      [Number(id), user.id]
+    );
+
+    if (request.item_id) {
+      await client.query(
+        `UPDATE itens
+         SET status = 'devolvido',
+             confirmado_por_id = $2,
+             confirmado_em = NOW(),
+             data_entrega = NOW(),
+             atualizado_em = NOW()
+         WHERE id = $1 AND cadastrado_por_id = $2 AND status = 'perdido'`,
+        [request.item_id, user.id]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    await auditService.logAction({
+      usuarioId: user.id,
+      acao: "solicitacao_perdido_marcada_como_encontrada",
+      entidade: "solicitacoes_perdidos",
+      entidadeId: requestResult.rows[0].id,
+      detalhes: { nome_item: request.nome_item, item_id: request.item_id }
+    });
+
+    return requestResult.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   findMatches,
   matchActiveRequestsForItem,
   createLostItem,
   listMine,
-  listAll
+  listAll,
+  markAsFoundByOwner
 };

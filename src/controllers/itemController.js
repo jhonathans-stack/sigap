@@ -1,12 +1,20 @@
 const itemService = require("../services/itemService");
 const asyncHandler = require("../utils/asyncHandler");
 
-const buildUploadedImageUrl = (file) => {
-  if (!file) {
-    return undefined;
+const buildUploadedImageUrls = (req) => {
+  const files = [];
+
+  if (req.file) {
+    files.push(req.file);
   }
 
-  return `/uploads/${file.filename}`;
+  if (req.files) {
+    Object.values(req.files).forEach((group) => {
+      files.push(...group);
+    });
+  }
+
+  return files.map((file) => `/uploads/${file.filename}`);
 };
 
 const listItens = asyncHandler(async (req, res) => {
@@ -20,7 +28,7 @@ const listUserRequests = asyncHandler(async (req, res) => {
 });
 
 const createItem = asyncHandler(async (req, res) => {
-  const item = await itemService.createItem(req.body, buildUploadedImageUrl(req.file), req.user);
+  const item = await itemService.createItem(req.body, buildUploadedImageUrls(req), req.user);
 
   res.status(201).json({
     mensagem: "Item cadastrado com sucesso.",
@@ -29,7 +37,7 @@ const createItem = asyncHandler(async (req, res) => {
 });
 
 const updateItem = asyncHandler(async (req, res) => {
-  const item = await itemService.updateItem(req.params.id, req.body, buildUploadedImageUrl(req.file), req.user);
+  const item = await itemService.updateItem(req.params.id, req.body, buildUploadedImageUrls(req), req.user);
 
   res.json({
     mensagem: "Item atualizado com sucesso.",
@@ -46,21 +54,32 @@ const deleteItem = asyncHandler(async (req, res) => {
 });
 
 const requestReturn = asyncHandler(async (req, res) => {
-  const item = await itemService.requestReturn(req.params.id, req.user);
+  const result = await itemService.requestReturn(req.params.id, req.user);
 
   res.json({
-    mensagem: "Solicitacao de devolucao registrada. Aguarde a separacao do item pela equipe.",
-    item
+    mensagem: "Código de coleta gerado com sucesso.",
+    item: result.item,
+    codigo_coleta: result.codigo_coleta
   });
 });
 
 const confirmReceipt = asyncHandler(async (req, res) => {
-  const item = await itemService.confirmReceipt(req.params.id, req.user);
+  const item = await itemService.confirmReceipt(req.params.id, req.body, req.user);
 
   res.json({
-    mensagem: "Recebimento confirmado com sucesso.",
+    mensagem: "Coleta confirmada com sucesso.",
     item
   });
+});
+
+const listItemsForCollection = asyncHandler(async (req, res) => {
+  const itens = await itemService.listItemsForCollection();
+  res.json(itens);
+});
+
+const listDeliveredReports = asyncHandler(async (req, res) => {
+  const entregas = await itemService.listDeliveredReports(req.query);
+  res.json(entregas);
 });
 
 module.exports = {
@@ -70,5 +89,7 @@ module.exports = {
   updateItem,
   deleteItem,
   requestReturn,
-  confirmReceipt
+  confirmReceipt,
+  listItemsForCollection,
+  listDeliveredReports
 };

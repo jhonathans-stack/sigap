@@ -1,12 +1,20 @@
 const lostItemService = require("../services/lostItemService");
 const asyncHandler = require("../utils/asyncHandler");
 
-const buildUploadedImageUrl = (file) => {
-  if (!file) {
-    return undefined;
+const buildUploadedImageUrls = (req) => {
+  const files = [];
+
+  if (req.file) {
+    files.push(req.file);
   }
 
-  return `/uploads/${file.filename}`;
+  if (req.files) {
+    Object.values(req.files).forEach((group) => {
+      files.push(...group);
+    });
+  }
+
+  return files.map((file) => `/uploads/${file.filename}`);
 };
 
 const findMatches = asyncHandler(async (req, res) => {
@@ -15,7 +23,7 @@ const findMatches = asyncHandler(async (req, res) => {
 });
 
 const createLostItem = asyncHandler(async (req, res) => {
-  const solicitacao = await lostItemService.createLostItem(req.body, buildUploadedImageUrl(req.file), req.user);
+  const solicitacao = await lostItemService.createLostItem(req.body, buildUploadedImageUrls(req), req.user);
 
   res.status(201).json({
     mensagem: "Alerta cadastrado com sucesso.",
@@ -33,9 +41,19 @@ const listAll = asyncHandler(async (req, res) => {
   res.json(solicitacoes);
 });
 
+const markAsFoundByOwner = asyncHandler(async (req, res) => {
+  const solicitacao = await lostItemService.markAsFoundByOwner(req.params.id, req.user);
+
+  res.json({
+    mensagem: "Item marcado como encontrado.",
+    solicitacao
+  });
+});
+
 module.exports = {
   findMatches,
   createLostItem,
   listMine,
-  listAll
+  listAll,
+  markAsFoundByOwner
 };

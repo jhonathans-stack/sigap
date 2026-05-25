@@ -7,6 +7,7 @@ import type {
   ItemFilters,
   ItemMutationResponse,
   AuditLog,
+  DeliveryReport,
   LoginResponse,
   LostItemRequest,
   LostItemResponse,
@@ -127,7 +128,7 @@ export const itensApi = {
     return data;
   },
 
-  async update(id: number, payload: Partial<Item>) {
+  async update(id: number, payload: Partial<Item> | FormData) {
     const { data } = await api.put<ItemMutationResponse>(`/api/itens/${id}`, payload);
     return data;
   },
@@ -142,8 +143,33 @@ export const itensApi = {
     return data;
   },
 
-  async confirmReceipt(id: number) {
-    const { data } = await api.post<ItemMutationResponse>(`/api/itens/${id}/confirmar-recebimento`);
+  async listForCollection() {
+    const { data } = await api.get<Item[]>("/api/itens/para-coleta");
+    return data;
+  },
+
+  async confirmCollection(id: number, payload: { codigo: string; coletor_nome: string; coletor_documento: string }) {
+    const { data } = await api.post<ItemMutationResponse>(`/api/itens/${id}/confirmar-coleta`, payload);
+    return data;
+  },
+
+  async deliveredReports(filters: { busca?: string; categoria?: string; local?: string } = {}) {
+    const params = new URLSearchParams();
+
+    if (filters.busca?.trim()) {
+      params.set("busca", filters.busca.trim());
+    }
+
+    if (filters.categoria?.trim()) {
+      params.set("categoria", filters.categoria.trim());
+    }
+
+    if (filters.local?.trim()) {
+      params.set("local", filters.local.trim());
+    }
+
+    const query = params.toString();
+    const { data } = await api.get<DeliveryReport[]>(query ? `/api/itens/entregues?${query}` : "/api/itens/entregues");
     return data;
   }
 };
@@ -193,6 +219,11 @@ export const lostItemsApi = {
 
   async listAll() {
     const { data } = await api.get<LostItemRequest[]>("/api/perdidos");
+    return data;
+  },
+
+  async markFound(id: number) {
+    const { data } = await api.patch<LostItemResponse>(`/api/perdidos/${id}/ja-encontrei`);
     return data;
   }
 };

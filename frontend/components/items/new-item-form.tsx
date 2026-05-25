@@ -37,18 +37,16 @@ const emptyForm = {
 export function NewItemForm() {
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
   useEffect(() => {
     return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
+      imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
     };
-  }, [imagePreview]);
+  }, [imagePreviews]);
 
   function clearErrors() {
     if (errors.length) {
@@ -57,32 +55,35 @@ export function NewItemForm() {
   }
 
   function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
 
-    if (!file) {
-      setImageFile(null);
-      setImagePreview("");
+    if (!files.length) {
+      setImageFiles([]);
+      setImagePreviews([]);
       return;
     }
 
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Por favor, selecione uma imagem valida (JPG ou PNG).");
+    if (files.length > 5) {
+      toast.error("Selecione no máximo 5 imagens.");
       event.target.value = "";
       return;
     }
 
-    if (file.size > maxFileSize) {
-      toast.error("A imagem deve ter no maximo 5MB.");
+    if (files.some((file) => !allowedTypes.includes(file.type))) {
+      toast.error("Selecione apenas imagens JPG ou PNG.");
       event.target.value = "";
       return;
     }
 
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
+    if (files.some((file) => file.size > maxFileSize)) {
+      toast.error("Cada imagem deve ter no máximo 5MB.");
+      event.target.value = "";
+      return;
     }
 
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+    setImageFiles(files);
+    setImagePreviews(files.map((file) => URL.createObjectURL(file)));
     clearErrors();
   }
 
@@ -109,8 +110,8 @@ export function NewItemForm() {
       nextErrors.push("Data do achado e obrigatoria.");
     }
 
-    if (!imageFile) {
-      nextErrors.push("Imagem do item e obrigatoria.");
+    if (!imageFiles.length) {
+      nextErrors.push("Ao menos uma imagem do item é obrigatória.");
     }
 
     return nextErrors;
@@ -139,9 +140,7 @@ export function NewItemForm() {
     formData.append("data_achado", form.data_achado);
     formData.append("status", "achado");
 
-    if (imageFile) {
-      formData.append("imagem", imageFile);
-    }
+    imageFiles.forEach((file) => formData.append("imagens", file));
 
     setLoading(true);
 
@@ -164,9 +163,13 @@ export function NewItemForm() {
             <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Imagem do item</h3>
 
             <div className="mb-4">
-              {imagePreview ? (
-                <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-                  <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+              {imagePreviews.length ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={preview} className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                      <img src={preview} alt={`Preview ${index + 1}`} className="h-full w-full object-cover" />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800">
@@ -178,12 +181,12 @@ export function NewItemForm() {
             <label className="cursor-pointer">
               <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-white transition-colors hover:bg-blue-700">
                 <Upload className="h-5 w-5" />
-                <span>{imageFile ? "Alterar imagem" : "Selecionar imagem"}</span>
-              </div>
-              <input type="file" accept="image/jpeg,image/png,image/jpg" onChange={handleImageChange} className="hidden" required disabled={loading} />
+                  <span>{imageFiles.length ? "Alterar imagens" : "Selecionar imagens"}</span>
+                </div>
+              <input type="file" accept="image/jpeg,image/png,image/jpg" onChange={handleImageChange} className="hidden" required disabled={loading} multiple />
             </label>
 
-            {imageFile ? <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">{imageFile.name}</p> : null}
+            {imageFiles.length ? <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">{imageFiles.length} imagem(ns) selecionada(s)</p> : null}
           </FigmaCard>
         </div>
 

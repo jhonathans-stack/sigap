@@ -3,7 +3,7 @@ import { LostItemPageContent } from "@/components/lost/lost-item-page-content";
 
 export default function LostItemPage() {
   return (
-    <AuthGuard>
+    <AuthGuard allowedRoles={["user"]}>
       <LostItemPageContent />
     </AuthGuard>
   );

@@ -84,8 +84,9 @@ export function AuthGuard({
   if (isLoading || isChecking) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 text-gray-700 dark:bg-gray-900 dark:text-gray-200">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm font-semibold shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          Verificando sessao...
+        <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-6 text-sm font-semibold shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600 dark:border-blue-900 dark:border-t-blue-300" />
+          Carregando...
         </div>
       </main>
     );
