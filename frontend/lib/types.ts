@@ -8,6 +8,7 @@ export type User = {
   cpf?: string | null;
   matricula?: string | null;
   foto_url?: string | null;
+  last_seen?: string | null;
   criado_em?: string;
 };
 
@@ -140,4 +141,59 @@ export type DeliveryReport = {
   solicitante_matricula?: string | null;
   entregue_por_nome?: string | null;
   entregue_por_email?: string | null;
+};
+
+export type P2PUserSummary = {
+  id: number;
+  nome: string;
+  foto_url?: string | null;
+  last_seen?: string | null;
+  online?: boolean;
+};
+
+export type P2PConversation = {
+  id: number;
+  item_id: number;
+  dono_id: number;
+  encontrado_por_id: number;
+  status: "aberta" | "devolvida" | "cancelada";
+  codigo_entrega?: string | null;
+  criado_em?: string;
+  atualizado_em?: string;
+  entregue_em?: string | null;
+  mensagens_nao_lidas?: number;
+  item: Pick<Item, "id" | "nome_item" | "descricao" | "categoria" | "imagem_url" | "imagens_urls" | "status">;
+  outro_usuario: P2PUserSummary;
+};
+
+export type P2PMessage = {
+  id: number;
+  conversa_id: number;
+  usuario_id?: number | null;
+  texto?: string | null;
+  imagem_url?: string | null;
+  lida_em?: string | null;
+  criado_em?: string;
+  usuario_nome?: string | null;
+  usuario_foto_url?: string | null;
+  usuario_last_seen?: string | null;
+  usuario_online?: boolean;
+};
+
+export type P2PReport = P2PConversation & {
+  nome_item?: string;
+  descricao?: string | null;
+  categoria?: string | null;
+  imagem_url?: string | null;
+  imagens_urls?: string[] | null;
+  dono_nome?: string;
+  encontrador_nome?: string;
+  mensagens: Array<{
+    id: number;
+    texto?: string | null;
+    imagem_url?: string | null;
+    lida_em?: string | null;
+    criado_em?: string;
+    usuario_nome?: string | null;
+  }>;
 };

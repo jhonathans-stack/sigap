@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   cpf VARCHAR(20) NOT NULL,
   matricula VARCHAR(50) NOT NULL,
   foto_url TEXT,
+  last_seen TIMESTAMP WITH TIME ZONE,
   criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -95,6 +96,35 @@ CREATE TABLE IF NOT EXISTS entregas_itens (
 CREATE INDEX IF NOT EXISTS idx_entregas_itens_item ON entregas_itens (item_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_itens_criado_em ON entregas_itens (criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_entregas_itens_coletor ON entregas_itens (LOWER(coletor_nome), LOWER(coletor_documento));
+
+CREATE TABLE IF NOT EXISTS p2p_conversas (
+  id SERIAL PRIMARY KEY,
+  item_id INTEGER REFERENCES itens(id) ON DELETE CASCADE,
+  dono_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+  encontrado_por_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+  codigo_entrega VARCHAR(6) NOT NULL,
+  codigo_entrega_hash TEXT NOT NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'aberta' CHECK (status IN ('aberta', 'devolvida', 'cancelada')),
+  criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  entregue_em TIMESTAMP WITH TIME ZONE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_p2p_conversas_codigo ON p2p_conversas (codigo_entrega);
+CREATE INDEX IF NOT EXISTS idx_p2p_conversas_item ON p2p_conversas (item_id);
+CREATE INDEX IF NOT EXISTS idx_p2p_conversas_participantes ON p2p_conversas (dono_id, encontrado_por_id);
+
+CREATE TABLE IF NOT EXISTS p2p_mensagens (
+  id SERIAL PRIMARY KEY,
+  conversa_id INTEGER REFERENCES p2p_conversas(id) ON DELETE CASCADE,
+  usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+  texto TEXT,
+  imagem_url TEXT,
+  lida_em TIMESTAMP WITH TIME ZONE,
+  criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_p2p_mensagens_conversa ON p2p_mensagens (conversa_id, criado_em);
 
 CREATE TABLE IF NOT EXISTS auditoria_logs (
   id SERIAL PRIMARY KEY,

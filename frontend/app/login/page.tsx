@@ -4,7 +4,7 @@ import { LoginForm } from "@/components/auth/login-form";
 export default function LoginPage() {
   return (
     <AuthShell
-      title="SIGAP Sistema de Gestão de Achados e Perdidos"
+      title="DropZone Sistema de Gestão de Achados e Perdidos"
       subtitle="Sistema de Gestão de Achados e Perdidos"
       footerLink={{
         href: "/register",

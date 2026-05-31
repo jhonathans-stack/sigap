@@ -1,7 +1,7 @@
 {
   "name": "sigap-backend",
   "version": "1.0.0",
-  "description": "Backend REST do SIGAP - Sistema de Gestao de Achados e Perdidos",
+  "description": "Backend REST do DropZone - Sistema de Gestao de Achados e Perdidos",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -10,7 +10,7 @@
     "web:build": "npm --prefix frontend run build",
     "web:start": "npm --prefix frontend run start",
     "seed:presentation": "node src/scripts/seedPresentationData.js",
-    "check": "node --check src/server.js && node --check src/app.js && node --check src/config/db.js && node --check src/controllers/authController.js && node --check src/controllers/itemController.js && node --check src/controllers/userController.js && node --check src/controllers/auditController.js && node --check src/controllers/lostItemController.js && node --check src/routes/authRoutes.js && node --check src/routes/itemRoutes.js && node --check src/routes/userRoutes.js && node --check src/routes/auditRoutes.js && node --check src/routes/lostItemRoutes.js && node --check src/services/authService.js && node --check src/services/databaseService.js && node --check src/services/itemService.js && node --check src/services/userService.js && node --check src/services/auditService.js && node --check src/services/lostItemService.js && node --check src/scripts/seedPresentationData.js && node --check src/middlewares/authMiddleware.js && node --check src/middlewares/errorHandler.js && node --check src/middlewares/sanitizeRequest.js && node --check src/middlewares/upload.js && node --check src/utils/AppError.js && node --check src/utils/asyncHandler.js && node --check src/utils/fileStorage.js && node --check src/utils/sanitize.js && node --check src/utils/validators.js"
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/config/db.js && node --check src/controllers/authController.js && node --check src/controllers/itemController.js && node --check src/controllers/userController.js && node --check src/controllers/auditController.js && node --check src/controllers/lostItemController.js && node --check src/controllers/p2pController.js && node --check src/routes/authRoutes.js && node --check src/routes/itemRoutes.js && node --check src/routes/userRoutes.js && node --check src/routes/auditRoutes.js && node --check src/routes/lostItemRoutes.js && node --check src/routes/p2pRoutes.js && node --check src/services/authService.js && node --check src/services/databaseService.js && node --check src/services/itemService.js && node --check src/services/userService.js && node --check src/services/auditService.js && node --check src/services/lostItemService.js && node --check src/services/p2pService.js && node --check src/scripts/seedPresentationData.js && node --check src/middlewares/authMiddleware.js && node --check src/middlewares/errorHandler.js && node --check src/middlewares/sanitizeRequest.js && node --check src/middlewares/upload.js && node --check src/utils/AppError.js && node --check src/utils/asyncHandler.js && node --check src/utils/fileStorage.js && node --check src/utils/sanitize.js && node --check src/utils/validators.js"
   },
   "keywords": [
     "sigap",
@@ -19,7 +19,7 @@
     "postgresql",
     "supabase"
   ],
-  "author": "SIGAP",
+  "author": "DropZone",
   "license": "MIT",
   "dependencies": {
     "bcrypt": "^6.0.0",

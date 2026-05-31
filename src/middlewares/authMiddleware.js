@@ -1,5 +1,14 @@
 const jwt = require("jsonwebtoken");
 const AppError = require("../utils/AppError");
+const pool = require("../config/db");
+
+const touchLastSeen = (user) => {
+  if (!user?.id) {
+    return;
+  }
+
+  pool.query("UPDATE usuarios SET last_seen = NOW() WHERE id = $1", [user.id]).catch(() => undefined);
+};
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -16,6 +25,7 @@ const authMiddleware = (req, res, next) => {
 
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
+    touchLastSeen(req.user);
     return next();
   } catch (error) {
     return next(new AppError("Token invalido ou expirado.", 401));
@@ -51,6 +61,7 @@ const optional = (req, res, next) => {
 
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
+    touchLastSeen(req.user);
   } catch {
     req.user = null;
   }

@@ -1,11 +1,12 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDays, HandHeart, ImageIcon, KeyRound, MapPin, Pencil, Save, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CalendarDays, HandHeart, ImageIcon, KeyRound, MapPin, MessageCircle, Pencil, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/status-badge";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getApiErrorMessage, itensApi } from "@/lib/api";
+import { getApiErrorMessage, itensApi, p2pApi } from "@/lib/api";
 import type { Item } from "@/lib/types";
 import { formatDate, getItemImageUrls } from "@/lib/utils";
 
@@ -32,12 +33,14 @@ export function ItemDetailsModal({
   onUpdated: (item: Item) => void;
   onDeleted: (id: number) => void;
 }) {
+  const router = useRouter();
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isOpeningP2P, setIsOpeningP2P] = useState(false);
   const [claimChecked, setClaimChecked] = useState(false);
   const [collectionCode, setCollectionCode] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -79,6 +82,7 @@ export function ItemDetailsModal({
   const isBaseUser = user?.role === "user";
   const visualStatus = item.status_visual || item.status;
   const canClaim = isBaseUser && ["achado", "perdido"].includes(item.status) && !item.minha_coleta_id;
+  const canOpenP2P = isBaseUser && item.status === "perdido" && item.cadastrado_por_id !== user?.id;
   const canMarkInfo = item.status === "perdido" && item.cadastrado_por_id === user?.id;
 
   function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
@@ -197,6 +201,27 @@ export function ItemDetailsModal({
       toast.error(getApiErrorMessage(error, "Não foi possível gerar o código de coleta."));
     } finally {
       setIsClaiming(false);
+    }
+  }
+
+  async function handleOpenP2P() {
+    if (!item || isOpeningP2P) {
+      return;
+    }
+
+    setIsOpeningP2P(true);
+
+    try {
+      const response = await p2pApi.reportFound(item.id);
+      toast.success("Contato P2P aberto.", {
+        description: "A pessoa que cadastrou o alerta poderá conversar com você pelo chat."
+      });
+      onClose();
+      router.push(`/p2p?conversa=${response.conversa.id}`);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Não foi possível abrir o contato P2P."));
+    } finally {
+      setIsOpeningP2P(false);
     }
   }
 
@@ -353,6 +378,13 @@ export function ItemDetailsModal({
                     {isClaiming ? "Gerando..." : "Gerar código de coleta"}
                   </button>
                 </div>
+              ) : null}
+
+              {canOpenP2P ? (
+                <button type="button" className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-700 disabled:opacity-60" onClick={handleOpenP2P} disabled={isOpeningP2P}>
+                  <MessageCircle size={17} />
+                  {isOpeningP2P ? "Abrindo chat..." : "Achei este item"}
+                </button>
               ) : null}
 
               {canMarkInfo ? (

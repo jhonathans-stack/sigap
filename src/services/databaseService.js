@@ -36,10 +36,11 @@ const ensureCompatibleColumns = async () => {
   await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cpf VARCHAR(20)");
   await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS matricula VARCHAR(50)");
   await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS foto_url TEXT");
+  await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP WITH TIME ZONE");
   await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user'");
   await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()");
   await pool.query("UPDATE usuarios SET cpf = LPAD(id::text, 11, '0') WHERE cpf IS NULL OR TRIM(cpf) = ''");
-  await pool.query("UPDATE usuarios SET matricula = CONCAT('SIGAP-', LPAD(id::text, 6, '0')) WHERE matricula IS NULL OR TRIM(matricula) = ''");
+  await pool.query("UPDATE usuarios SET matricula = CONCAT('DROP-', LPAD(id::text, 6, '0')) WHERE matricula IS NULL OR TRIM(matricula) = ''");
 
   await runCompatibilityQuery("ALTER TABLE usuarios ALTER COLUMN cpf SET NOT NULL");
   await runCompatibilityQuery("ALTER TABLE usuarios ALTER COLUMN matricula SET NOT NULL");
@@ -117,7 +118,7 @@ const initializeDatabase = async () => {
       await ensureCompatibleColumns();
       await seedDefaultSuperUser();
       await runRetentionRoutine();
-      console.log("Banco de dados SIGAP pronto.");
+      console.log("Banco de dados DropZone pronto.");
     })().catch((error) => {
       initializationPromise = undefined;
       throw error;

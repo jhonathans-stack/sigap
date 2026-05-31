@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { FigmaButton, FigmaModal } from "@/components/ui/figma-primitives";
+import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useTheme } from "@/components/providers/theme-provider";
 import { canManageItems, canViewUsers } from "@/lib/storage";
@@ -57,11 +58,13 @@ export function Header() {
     { href: "/", label: "Home", show: true },
     { href: "/lost/new", label: "Perdi um item", show: isBaseUser },
     { href: "/requests", label: "Minhas solicitações", show: isBaseUser },
+    { href: "/p2p", label: "Conversas", show: isBaseUser },
     { href: "/items/new", label: "Cadastrar item", show: canManage },
     { href: "/admin/collection", label: "Itens para coleta", show: canManage },
     { href: "/admin/delivered", label: "Itens entregues", show: canManage },
     { href: "/admin/users", label: "Usuários", show: canViewUsers(user) },
-    { href: "/admin/audit", label: "Auditoria", show: canViewUsers(user) }
+    { href: "/admin/audit", label: "Auditoria", show: canViewUsers(user) },
+    { href: "/admin/p2p", label: "Relatórios P2P", show: user?.role === "super" }
   ];
 
   function handleLogout() {
@@ -75,8 +78,8 @@ export function Header() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-8">
-              <Link href="/" className="text-2xl font-bold text-blue-600 transition-opacity hover:opacity-80 dark:text-blue-400">
-                SIGAP
+              <Link href="/" className="text-blue-600 transition-opacity hover:opacity-80 dark:text-blue-400">
+                <BrandLogo compact />
               </Link>
 
               <div className="hidden items-center gap-6 md:flex">

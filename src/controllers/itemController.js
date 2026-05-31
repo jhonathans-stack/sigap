@@ -14,7 +14,7 @@ const buildUploadedImageUrls = (req) => {
     });
   }
 
-  return files.map((file) => `/uploads/${file.filename}`);
+  return files.map((file) => `data:${file.mimetype};base64,${file.buffer.toString("base64")}`);
 };
 
 const listItens = asyncHandler(async (req, res) => {

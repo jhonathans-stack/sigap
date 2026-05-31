@@ -1,4 +1,5 @@
 import { CheckCircle, FileText, Search } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const featureItems = [
@@ -38,7 +39,10 @@ export function AuthShell({
         </div>
         <div className="mx-auto max-w-2xl">
           <div className="mb-8 text-center">
-            <h1 className="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Criar conta no SIGAP</h1>
+            <div className="mb-4 flex justify-center text-gray-900 dark:text-white">
+              <BrandLogo />
+            </div>
+            <h1 className="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Criar conta no DropZone</h1>
             <p className="text-gray-600 dark:text-gray-400">Preencha seus dados para acessar o sistema</p>
           </div>
 
@@ -57,7 +61,9 @@ export function AuthShell({
       </div>
       <section className="hidden w-1/2 flex-col justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-green-700 p-12 lg:flex">
         <div className="max-w-xl">
-          <h1 className="mb-4 text-6xl font-bold text-white">SIGAP</h1>
+          <div className="mb-6 text-white">
+            <BrandLogo />
+          </div>
           <p className="mb-2 text-2xl text-blue-100">Sistema de Gestão de Achados e Perdidos</p>
           <p className="mb-12 text-lg text-blue-200">Gerencie itens encontrados de forma simples e organizada</p>
 
@@ -80,14 +86,16 @@ export function AuthShell({
           <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-8">
               <div className="mb-2 text-sm font-medium text-blue-600 dark:text-blue-400">Acesso seguro</div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Entrar no SIGAP</h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Entrar no DropZone</h2>
             </div>
 
             {children}
           </div>
 
           <div className="mt-8 text-center lg:hidden">
-            <h3 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">SIGAP</h3>
+            <div className="mb-2 flex justify-center text-gray-900 dark:text-white">
+              <BrandLogo compact />
+            </div>
             <p className="text-gray-600 dark:text-gray-400">Sistema de Gestão de Achados e Perdidos</p>
           </div>
         </div>

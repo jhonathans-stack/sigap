@@ -565,7 +565,7 @@ function ConfirmUserActionModal({
   const isDelete = action.type === "delete";
   const title = isDelete ? "Confirmar exclusao" : "Confirmar acesso super";
   const description = isDelete
-    ? `Tem certeza que deseja excluir ${action.user.nome}? Essa acao remove o acesso do usuario ao SIGAP.`
+    ? `Tem certeza que deseja excluir ${action.user.nome}? Essa acao remove o acesso do usuario ao DropZone.`
     : `Tem certeza que deseja promover ${action.user.nome} para superusuario? Esse perfil tera acesso total ao sistema.`;
 
   return (

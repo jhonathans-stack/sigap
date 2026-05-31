@@ -3,8 +3,8 @@ import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 
 export const metadata: Metadata = {
-  title: "SIGAP",
-  description: "Sistema de Gestao de Achados e Perdidos"
+  title: "DropZone",
+  description: "Sistema de Gestão de Achados e Perdidos"
 };
 
 export default function RootLayout({

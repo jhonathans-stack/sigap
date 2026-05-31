@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const auditRoutes = require("./routes/auditRoutes");
 const itemRoutes = require("./routes/itemRoutes");
 const lostItemRoutes = require("./routes/lostItemRoutes");
+const p2pRoutes = require("./routes/p2pRoutes");
 const userRoutes = require("./routes/userRoutes");
 const errorHandler = require("./middlewares/errorHandler");
 const sanitizeRequest = require("./middlewares/sanitizeRequest");
@@ -34,8 +35,8 @@ app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 app.get("/", (req, res) => {
   res.json({
-    mensagem: "SIGAP API online",
-    rotas: ["/api/auth/login", "/api/auth/register", "/api/itens", "/api/perdidos", "/api/usuarios", "/api/auditoria"]
+    mensagem: "DropZone API online",
+    rotas: ["/api/auth/login", "/api/auth/register", "/api/itens", "/api/perdidos", "/api/p2p", "/api/usuarios", "/api/auditoria"]
   });
 });
 
@@ -48,6 +49,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/auditoria", auditRoutes);
 app.use("/api/itens", itemRoutes);
 app.use("/api/perdidos", lostItemRoutes);
+app.use("/api/p2p", p2pRoutes);
 app.use("/api/usuarios", userRoutes);
 
 app.use((req, res, next) => {

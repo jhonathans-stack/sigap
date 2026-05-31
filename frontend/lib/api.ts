@@ -11,6 +11,9 @@ import type {
   LoginResponse,
   LostItemRequest,
   LostItemResponse,
+  P2PConversation,
+  P2PMessage,
+  P2PReport,
   RegisterResponse,
   User,
   UserCreateResponse,
@@ -245,6 +248,38 @@ export const auditApi = {
     const { data } = await api.get<Blob>("/api/auditoria/export-itens", {
       responseType: "blob"
     });
+    return data;
+  }
+};
+
+export const p2pApi = {
+  async reportFound(itemId: number) {
+    const { data } = await api.post<{ mensagem: string; conversa: P2PConversation }>(`/api/p2p/itens/${itemId}/achei`);
+    return data;
+  },
+
+  async conversations() {
+    const { data } = await api.get<P2PConversation[]>("/api/p2p/conversas");
+    return data;
+  },
+
+  async messages(id: number) {
+    const { data } = await api.get<{ conversa: P2PConversation; mensagens: P2PMessage[] }>(`/api/p2p/conversas/${id}/mensagens`);
+    return data;
+  },
+
+  async sendMessage(id: number, payload: FormData) {
+    const { data } = await api.post<{ mensagem: string; dado: P2PMessage }>(`/api/p2p/conversas/${id}/mensagens`, payload);
+    return data;
+  },
+
+  async confirmDelivery(id: number, codigo: string) {
+    const { data } = await api.post<ItemMutationResponse>(`/api/p2p/conversas/${id}/confirmar-entrega`, { codigo });
+    return data;
+  },
+
+  async reports() {
+    const { data } = await api.get<P2PReport[]>("/api/p2p/relatorios");
     return data;
   }
 };
