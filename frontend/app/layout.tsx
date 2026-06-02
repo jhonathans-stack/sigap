@@ -3,7 +3,7 @@ import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 
 export const metadata: Metadata = {
-  title: "DropZone",
+  title: "Sistema de Achados e Perdidos",
   description: "Sistema de Gestão de Achados e Perdidos"
 };
 

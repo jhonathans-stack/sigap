@@ -42,7 +42,7 @@ export function AuthShell({
             <div className="mb-4 flex justify-center text-gray-900 dark:text-white">
               <BrandLogo />
             </div>
-            <h1 className="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Criar conta no DropZone</h1>
+            <h1 className="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Criar conta</h1>
             <p className="text-gray-600 dark:text-gray-400">Preencha seus dados para acessar o sistema</p>
           </div>
 
@@ -86,7 +86,7 @@ export function AuthShell({
           <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-8">
               <div className="mb-2 text-sm font-medium text-blue-600 dark:text-blue-400">Acesso seguro</div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Entrar no DropZone</h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Entrar no sistema</h2>
             </div>
 
             {children}

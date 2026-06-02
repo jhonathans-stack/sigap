@@ -313,7 +313,7 @@ export function RegisterForm() {
       <FigmaModal isOpen={lgpdModalOpen} onClose={() => setLgpdModalOpen(false)} title="Consentimento LGPD" size="md">
         <div className="space-y-4 text-gray-700 dark:text-gray-300">
           <p>
-            Ao utilizar o DropZone, voce concorda com a coleta e tratamento dos seus dados pessoais (nome, email, CPF,
+            Ao utilizar o sistema, voce concorda com a coleta e tratamento dos seus dados pessoais (nome, email, CPF,
             matricula e foto) para as seguintes finalidades:
           </p>
           <ul className="list-inside list-disc space-y-2">

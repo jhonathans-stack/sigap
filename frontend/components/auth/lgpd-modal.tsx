@@ -20,7 +20,7 @@ export function LgpdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             <h2 id="lgpd-title" className="text-xl font-bold text-slate-950 dark:text-white">
               Consentimento LGPD
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Uso responsavel dos dados no DropZone.</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Uso responsavel dos dados no sistema.</p>
           </div>
           <button type="button" onClick={onClose} className="sigap-secondary h-9 w-9 px-0" aria-label="Fechar modal">
             <X size={17} />
@@ -38,7 +38,7 @@ export function LgpdModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
           </p>
           <p>
             Ao aceitar, voce declara estar ciente desse tratamento de dados para fins academicos e operacionais do
-            DropZone.
+            sistema.
           </p>
         </div>
 
