@@ -138,3 +138,21 @@ CREATE TABLE IF NOT EXISTS auditoria_logs (
 
 CREATE INDEX IF NOT EXISTS idx_auditoria_logs_criado_em ON auditoria_logs (criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_auditoria_logs_entidade ON auditoria_logs (entidade, entidade_id);
+
+ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE itens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE solicitacoes_perdidos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coletas_itens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entregas_itens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE p2p_conversas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE p2p_mensagens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auditoria_logs ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE usuarios FROM anon, authenticated;
+REVOKE ALL ON TABLE itens FROM anon, authenticated;
+REVOKE ALL ON TABLE solicitacoes_perdidos FROM anon, authenticated;
+REVOKE ALL ON TABLE coletas_itens FROM anon, authenticated;
+REVOKE ALL ON TABLE entregas_itens FROM anon, authenticated;
+REVOKE ALL ON TABLE p2p_conversas FROM anon, authenticated;
+REVOKE ALL ON TABLE p2p_mensagens FROM anon, authenticated;
+REVOKE ALL ON TABLE auditoria_logs FROM anon, authenticated;
