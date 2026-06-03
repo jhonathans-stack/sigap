@@ -1,6 +1,6 @@
 "use client";
 
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 import type {
   Item,
@@ -27,6 +27,10 @@ type SigapError = AxiosError<{ erro?: string }> & {
   sigapMessage?: string;
 };
 
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retryAfterColdStart?: boolean;
+};
+
 export function getApiErrorMessage(error: unknown, fallback = "Nao foi possivel concluir a operacao.") {
   const sigapError = error as SigapError;
   return sigapError.sigapMessage || sigapError.response?.data?.erro || sigapError.message || fallback;
@@ -34,7 +38,7 @@ export function getApiErrorMessage(error: unknown, fallback = "Nao foi possivel 
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000
+  timeout: 60000
 });
 
 api.interceptors.request.use((config) => {
@@ -53,7 +57,15 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error: SigapError) => {
+  async (error: SigapError) => {
+    const requestConfig = error.config as RetryableRequestConfig | undefined;
+
+    if (!error.response && requestConfig && !requestConfig._retryAfterColdStart) {
+      requestConfig._retryAfterColdStart = true;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return api(requestConfig);
+    }
+
     const message = error.response?.data?.erro || "Erro inesperado ao comunicar com a API.";
     error.sigapMessage = message;
 
